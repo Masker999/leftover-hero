@@ -436,6 +436,70 @@ main { overflow: hidden; }
 }
 .btn-add:hover { background: var(--green-dark); }
 
+/* 食材 / 調味料 分頁 */
+.panel-tabs {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  margin-bottom: 13px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--paper-2);
+}
+.panel-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.panel-tab:hover { color: var(--green-dark); }
+.panel-tab.is-active {
+  background: var(--paper);
+  color: var(--green-dark);
+  box-shadow: 0 1px 3px rgba(31, 45, 39, 0.09);
+}
+.panel-tab .tab-count {
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--cream);
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.panel-tab.is-active .tab-count { background: var(--green-soft); color: var(--green-dark); }
+
+.tab-pane[hidden] { display: none; }
+
+.seasoning-grid { margin-top: 12px; }
+
+.seasoning-actions {
+  display: flex;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.chip-price {
+  margin-left: 4px;
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--tomato);
+  font-weight: 700;
+}
+
 .quick-chips {
   display: flex;
   flex-wrap: wrap;
@@ -875,6 +939,18 @@ main { overflow: hidden; }
 .ing-chip.have { background: var(--green-soft); color: var(--green-dark); border-color: #cbe3d2; }
 .ing-chip.buy { background: var(--mustard-soft); color: #7c5900; border-color: #f0dca4; }
 .ing-chip.pantry { background: var(--cream); color: var(--muted); }
+.ing-chip.missing { background: var(--tomato-soft); color: #9b3a28; border-color: #f3c8bf; }
+
+.seasoning-need {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 9px;
+  background: rgba(217, 83, 61, 0.06);
+  color: #8d3524;
+  font-size: 11.5px;
+  line-height: 1.55;
+}
 
 .card-expiring {
   display: flex;
@@ -1341,7 +1417,7 @@ main { overflow: hidden; }
           <button class="btn btn-ghost" id="loadDemoBtn" type="button">載入範例冰箱</button>
         </div>
         <ul class="hero-facts">
-          <li><strong>30</strong><span>道家常食譜</span></li>
+          <li><strong id="statRecipeCount">30</strong><span>道家常食譜</span></li>
           <li><strong>0 元</strong><span>也能變出一餐</span></li>
           <li><strong>30 秒</strong><span>算完採購清單</span></li>
         </ul>
@@ -1378,7 +1454,7 @@ main { overflow: hidden; }
 
         <form id="fridgeForm" novalidate>
 
-          <!-- 1. 食材 -->
+          <!-- 1. 食材 / 調味料 -->
           <div class="field-group">
             <div class="field-title">
               <span class="step-num">1</span>
@@ -1386,21 +1462,46 @@ main { overflow: hidden; }
               <span class="field-count" id="selectedCount">0 樣</span>
             </div>
 
-            <div class="ingredient-input">
-              <input
-                type="text"
-                id="ingredientInput"
-                placeholder="輸入食材，例如：高麗菜"
-                autocomplete="off"
-                aria-label="輸入冰箱食材">
-              <button type="submit" class="btn btn-add" id="addIngredientBtn">加入</button>
+            <div class="panel-tabs" role="tablist" aria-label="食材與調味料">
+              <button type="button" class="panel-tab is-active" role="tab" id="tabIngredients"
+                aria-selected="true" aria-controls="paneIngredients" data-tab="ingredients">
+                食材 <span class="tab-count" id="ingredientTabCount">0</span>
+              </button>
+              <button type="button" class="panel-tab" role="tab" id="tabSeasonings"
+                aria-selected="false" aria-controls="paneSeasonings" data-tab="seasonings">
+                調味料 <span class="tab-count" id="seasoningTabCount">0</span>
+              </button>
             </div>
 
-            <div class="quick-chips" id="quickChips" aria-label="常見食材快速加入"></div>
+            <div class="tab-pane" id="paneIngredients" role="tabpanel" aria-labelledby="tabIngredients">
+              <div class="ingredient-input">
+                <input
+                  type="text"
+                  id="ingredientInput"
+                  list="ingredientList"
+                  placeholder="輸入食材，例如：高麗菜"
+                  autocomplete="off"
+                  aria-label="輸入冰箱食材">
+                <datalist id="ingredientList"></datalist>
+                <button type="submit" class="btn btn-add" id="addIngredientBtn">加入</button>
+              </div>
 
-            <ul class="selected-list" id="selectedList" aria-live="polite"></ul>
-            <p class="empty-inline" id="emptyIngredients">還沒加入食材。先點幾個常見食材，或按「載入範例冰箱」。</p>
-            <p class="hint">點食材旁的 <span class="mini-clock">⏱</span> 標記「快過期」，系統會優先幫你清掉。</p>
+              <div class="quick-chips" id="quickChips" aria-label="常見食材快速加入"></div>
+
+              <ul class="selected-list" id="selectedList" aria-live="polite"></ul>
+              <p class="empty-inline" id="emptyIngredients">還沒加入食材。先點幾個常見食材，或按「載入範例冰箱」。</p>
+              <p class="hint">點食材旁的 <span class="mini-clock">⏱</span> 標記「快過期」，系統會優先幫你清掉。</p>
+            </div>
+
+            <div class="tab-pane" id="paneSeasonings" role="tabpanel" aria-labelledby="tabSeasonings" hidden>
+              <p class="hint">勾選家裡有的調味料。取消勾選的，需要它的食譜會標示「缺」並降低推薦。</p>
+              <div class="check-chips seasoning-grid" id="seasoningList"></div>
+              <div class="seasoning-actions">
+                <button type="button" class="link-btn" id="seasoningAllBtn">全部都有</button>
+                <button type="button" class="link-btn" id="seasoningNoneBtn">全部清除</button>
+              </div>
+              <p class="hint">調味料用量少，勾選代表不用再買；咖哩塊、味噌這類單價較高的，沒勾會算進採購金額。</p>
+            </div>
           </div>
 
           <hr class="divider">
@@ -1584,7 +1685,7 @@ main { overflow: hidden; }
         </article>
         <article class="how-card">
           <span class="how-num">02</span>
-          <h3>比對 30 道家常菜</h3>
+          <h3>比對 <span id="compareRecipeCount">30</span> 道家常菜</h3>
           <p>依飲食、器具、時間過濾，再計算食材覆蓋率、快過期加權與採購成本。</p>
         </article>
         <article class="how-card">
@@ -1622,7 +1723,7 @@ main { overflow: hidden; }
           <div><span>課程</span><strong>當機器人來上班－未來職場的 AI 必修課</strong></div>
           <div><span>形式</span><strong>期末實作雛型</strong></div>
           <div><span>技術</span><strong>HTML / CSS / JavaScript + n8n</strong></div>
-          <div><span>資料</span><strong>30 道家常食譜・台灣超市均價概估</strong></div>
+          <div><span>資料</span><strong><span id="dataRecipeCount">30</span> 道家常食譜・<span id="dataIngredientCount">40</span> 樣食材・台灣超市均價概估</strong></div>
         </div>
       </div>
     </section>
@@ -1692,14 +1793,60 @@ const INGREDIENTS = {
   ham:         { name: '火腿',       unit: '2 片',   price: 15, cat: '蛋白質', aliases: ['火腿'] },
   shrimp:      { name: '蝦仁',       unit: '1 份',   price: 45, cat: '蛋白質', aliases: ['蝦', '蝦仁'] },
 
-  /* 冰箱常備調味料：不計入採購成本 */
-  soy:         { name: '醬油',       unit: '適量',   price: 0,  cat: '調味', pantry: true, aliases: ['醬油', '生抽'] },
-  salt:        { name: '鹽',         unit: '適量',   price: 0,  cat: '調味', pantry: true, aliases: ['鹽', '食鹽'] },
-  oil:         { name: '油',         unit: '適量',   price: 0,  cat: '調味', pantry: true, aliases: ['油', '沙拉油', '橄欖油'] },
-  sugar:       { name: '糖',         unit: '適量',   price: 0,  cat: '調味', pantry: true, aliases: ['糖', '砂糖'] },
-  pepper:      { name: '胡椒',       unit: '適量',   price: 0,  cat: '調味', pantry: true, aliases: ['胡椒', '黑胡椒'] },
-  mayo:        { name: '美乃滋',     unit: '1 匙',   price: 0,  cat: '調味', pantry: true, aliases: ['美乃滋', '蛋黃醬'] },
-  water:       { name: '水',         unit: '適量',   price: 0,  cat: '調味', pantry: true, aliases: ['水'] }
+  /* 第二批：常見冰箱食材 */
+  cucumber:    { name: '小黃瓜',     unit: '1 根',   price: 10, cat: '蔬菜',   aliases: ['小黃瓜', '黃瓜'] },
+  spinach:     { name: '菠菜',       unit: '1 把',   price: 20, cat: '蔬菜',   aliases: ['菠菜'] },
+  bokchoy:     { name: '小白菜',     unit: '1 把',   price: 15, cat: '蔬菜',   aliases: ['小白菜', '青菜'] },
+  waterSpinach:{ name: '空心菜',     unit: '1 把',   price: 20, cat: '蔬菜',   aliases: ['空心菜', '蕹菜'] },
+  eggplant:    { name: '茄子',       unit: '1 條',   price: 20, cat: '蔬菜',   aliases: ['茄子'] },
+  pumpkin:     { name: '南瓜',       unit: '1/4 顆', price: 20, cat: '蔬菜',   aliases: ['南瓜'] },
+  radish:      { name: '白蘿蔔',     unit: '1/3 條', price: 12, cat: '蔬菜',   aliases: ['白蘿蔔', '菜頭', '蘿蔔'] },
+  woodEar:     { name: '木耳',       unit: '1 盒',   price: 15, cat: '蔬菜',   aliases: ['木耳', '黑木耳'] },
+  greenBean:   { name: '四季豆',     unit: '1 把',   price: 20, cat: '蔬菜',   aliases: ['四季豆', '敏豆'] },
+  celery:      { name: '芹菜',       unit: '1 把',   price: 15, cat: '蔬菜',   aliases: ['芹菜'] },
+  basil:       { name: '九層塔',     unit: '1 把',   price: 10, cat: '蔬菜',   aliases: ['九層塔', '羅勒'] },
+  beef:        { name: '牛肉片',     unit: '100g',   price: 55, cat: '蛋白質', aliases: ['牛肉', '牛肉片'] },
+  bacon:       { name: '培根',       unit: '2 片',   price: 20, cat: '蛋白質', aliases: ['培根'] },
+  mackerel:    { name: '鯖魚',       unit: '1 片',   price: 45, cat: '蛋白質', aliases: ['鯖魚', '秋刀魚'] },
+  fishball:    { name: '魚丸',       unit: '5 顆',   price: 25, cat: '蛋白質', aliases: ['魚丸', '貢丸'] },
+  squid:       { name: '花枝',       unit: '1 份',   price: 50, cat: '蛋白質', aliases: ['花枝', '透抽', '魷魚'] },
+  crabstick:   { name: '蟹味棒',     unit: '4 支',   price: 20, cat: '蛋白質', aliases: ['蟹味棒', '蟹肉棒'] },
+  tofuSkin:    { name: '豆皮',       unit: '2 片',   price: 15, cat: '蛋白質', aliases: ['豆皮', '腐竹'] },
+  edamame:     { name: '毛豆',       unit: '1 碗',   price: 25, cat: '蛋白質', aliases: ['毛豆'] },
+  luncheon:    { name: '午餐肉',     unit: '2 片',   price: 25, cat: '蛋白質', aliases: ['午餐肉', '餐肉'] },
+  udon:        { name: '烏龍麵',     unit: '1 包',   price: 20, cat: '主食',   aliases: ['烏龍麵', '烏冬'] },
+  riceNoodle:  { name: '米粉',       unit: '1 份',   price: 12, cat: '主食',   aliases: ['米粉', '炊粉'] },
+  flour:       { name: '麵粉',       unit: '100g',   price: 8,  cat: '主食',   aliases: ['麵粉', '中筋麵粉'] },
+  butter:      { name: '奶油',       unit: '20g',    price: 15, cat: '乳製品', aliases: ['奶油', '黃油'] },
+  yogurt:      { name: '優格',       unit: '1 杯',   price: 20, cat: '乳製品', aliases: ['優格', '酸奶'] },
+  apple:       { name: '蘋果',       unit: '1 顆',   price: 20, cat: '水果',   aliases: ['蘋果'] },
+  pineapple:   { name: '鳳梨',       unit: '1/4 顆', price: 20, cat: '水果',   aliases: ['鳳梨', '菠蘿'] },
+  orange:      { name: '橘子',       unit: '1 顆',   price: 15, cat: '水果',   aliases: ['橘子', '柳丁', '柑橘'] },
+
+  /* 調味料：用量少、單價低，預設視為家裡有；可在「調味料」分頁取消勾選 */
+  soy:         { name: '醬油',       unit: '適量',   price: 0,  cat: '調味', seasoning: true, aliases: ['醬油', '生抽'] },
+  salt:        { name: '鹽',         unit: '適量',   price: 0,  cat: '調味', seasoning: true, aliases: ['鹽', '食鹽'] },
+  oil:         { name: '食用油',     unit: '適量',   price: 0,  cat: '調味', seasoning: true, aliases: ['油', '沙拉油', '橄欖油', '食用油'] },
+  sugar:       { name: '糖',         unit: '適量',   price: 0,  cat: '調味', seasoning: true, aliases: ['糖', '砂糖'] },
+  pepper:      { name: '黑胡椒',     unit: '適量',   price: 0,  cat: '調味', seasoning: true, aliases: ['胡椒', '黑胡椒'] },
+  whitePepper: { name: '白胡椒粉',   unit: '適量',   price: 0,  cat: '調味', seasoning: true, aliases: ['白胡椒', '胡椒粉'] },
+  vinegar:     { name: '醋',         unit: '適量',   price: 0,  cat: '調味', seasoning: true, aliases: ['醋', '白醋', '烏醋'] },
+  sesameOil:   { name: '香油',       unit: '適量',   price: 0,  cat: '調味', seasoning: true, aliases: ['香油', '麻油'] },
+  oysterSauce: { name: '蠔油',       unit: '適量',   price: 0,  cat: '調味', seasoning: true, aliases: ['蠔油', '蚝油'] },
+  doubanjiang: { name: '豆瓣醬',     unit: '適量',   price: 0,  cat: '調味', seasoning: true, aliases: ['豆瓣醬', '辣豆瓣'] },
+  ketchup:     { name: '番茄醬',     unit: '適量',   price: 0,  cat: '調味', seasoning: true, aliases: ['番茄醬', 'ketchup'] },
+  riceWine:    { name: '米酒',       unit: '適量',   price: 0,  cat: '調味', seasoning: true, aliases: ['米酒', '料理酒'] },
+  mirin:       { name: '味醂',       unit: '適量',   price: 0,  cat: '調味', seasoning: true, aliases: ['味醂', '味霖'] },
+  chiliSauce:  { name: '辣椒醬',     unit: '適量',   price: 0,  cat: '調味', seasoning: true, aliases: ['辣椒醬', '辣醬'] },
+  sesame:      { name: '白芝麻',     unit: '適量',   price: 0,  cat: '調味', seasoning: true, aliases: ['芝麻', '白芝麻'] },
+  fiveSpice:   { name: '五香粉',     unit: '適量',   price: 0,  cat: '調味', seasoning: true, aliases: ['五香粉', '五香'] },
+  cornstarch:  { name: '太白粉',     unit: '適量',   price: 0,  cat: '調味', seasoning: true, aliases: ['太白粉', '玉米粉', '樹薯粉'] },
+  stock:       { name: '高湯粉',     unit: '適量',   price: 0,  cat: '調味', seasoning: true, aliases: ['高湯', '雞粉', '高湯粉', '烹大師'] },
+  honey:       { name: '蜂蜜',       unit: '適量',   price: 0,  cat: '調味', seasoning: true, aliases: ['蜂蜜'] },
+  mayo:        { name: '美乃滋',     unit: '1 匙',   price: 0,  cat: '調味', seasoning: true, aliases: ['美乃滋', '蛋黃醬'] },
+  curry:       { name: '咖哩塊',     unit: '1 小塊', price: 10, cat: '調味', seasoning: true, aliases: ['咖哩', '咖哩塊'] },
+  miso:        { name: '味噌',       unit: '1 匙',   price: 5,  cat: '調味', seasoning: true, aliases: ['味噌', '味增'] },
+  water:       { name: '水',         unit: '適量',   price: 0,  cat: '調味', seasoning: true, always: true, aliases: ['水'] }
 };
 
 /* 依「最低飲食限制」標記：全素 < 蛋奶素 < 葷 */
@@ -2348,6 +2495,472 @@ const RECIPES = [
     ],
     tip: '調味包只放一半，鈉含量直接減半。',
     kcal: 480, protein: 18
+  },
+  {
+    id: 'tomato-egg-stirfry',
+    name: '番茄炒蛋',
+    desc: '酸甜軟嫩的國民家常菜，10 分鐘就能上桌。',
+    time: 10, diet: '蛋奶素', equip: ['瓦斯爐'], family: '蛋',
+    tags: ['10 分鐘', '零失敗', '下飯'],
+    ingredients: [
+      { id: 'tomato', qty: 2, amount: '2 顆' },
+      { id: 'egg', qty: 2, amount: '2 顆' },
+      { id: 'scallion', qty: 0.5, amount: '半把' },
+      { id: 'ketchup', qty: 1, amount: '1 匙' },
+      { id: 'sugar', qty: 1, amount: '1 小匙' },
+      { id: 'salt', qty: 1, amount: '適量' }
+    ],
+    steps: [
+      '番茄切塊，蛋打散加一點鹽。',
+      '熱鍋下油，蛋液炒到半熟先盛起。',
+      '原鍋炒番茄，加番茄醬與糖煮出湯汁。',
+      '蛋回鍋拌勻，撒蔥花起鍋。'
+    ],
+    tip: '加一點番茄醬，顏色更紅、味道更集中。',
+    kcal: 320, protein: 16
+  },
+  {
+    id: 'cucumber-salad',
+    name: '涼拌小黃瓜',
+    desc: '拍兩下就能做的冰箱常備小菜，配什麼都對。',
+    time: 10, diet: '全素', equip: [], family: '小菜',
+    tags: ['10 分鐘', '免開火', '可先做起來放'],
+    ingredients: [
+      { id: 'cucumber', qty: 1, amount: '1 根' },
+      { id: 'garlic', qty: 2, amount: '2 瓣' },
+      { id: 'vinegar', qty: 1, amount: '1 匙' },
+      { id: 'sesameOil', qty: 1, amount: '1 小匙' },
+      { id: 'sugar', qty: 1, amount: '1 小匙' },
+      { id: 'salt', qty: 1, amount: '適量' }
+    ],
+    steps: [
+      '小黃瓜拍裂切段，加鹽抓醃 5 分鐘後瀝乾。',
+      '蒜末、醋、糖、香油拌成醬汁。',
+      '醬汁淋上小黃瓜拌勻，冰一下更好吃。'
+    ],
+    tip: '先加鹽脫水，拌完才不會出水變淡。',
+    kcal: 90, protein: 3
+  },
+  {
+    id: 'garlic-spinach',
+    name: '蒜香菠菜',
+    desc: '大火快炒一分鐘，比燙青菜更有味道。',
+    time: 10, diet: '全素', equip: ['瓦斯爐'], family: '菜',
+    tags: ['10 分鐘', '一鍋到底', '補菜'],
+    ingredients: [
+      { id: 'spinach', qty: 1, amount: '1 把' },
+      { id: 'garlic', qty: 2, amount: '2 瓣' },
+      { id: 'oil', qty: 1, amount: '適量' },
+      { id: 'salt', qty: 1, amount: '適量' }
+    ],
+    steps: [
+      '菠菜洗淨切段，蒜頭切片。',
+      '熱鍋下油爆香蒜片。',
+      '下菠菜大火快炒，加鹽調味即可起鍋。'
+    ],
+    tip: '菠菜炒太久會變黑，看到葉子塌下去就起鍋。',
+    kcal: 110, protein: 5
+  },
+  {
+    id: 'stirfry-water-spinach',
+    name: '蒜炒空心菜',
+    desc: '一把 20 元的青菜，配一碗白飯就是完整一餐。',
+    time: 10, diet: '全素', equip: ['瓦斯爐'], family: '菜',
+    tags: ['10 分鐘', '銅板價', '補菜'],
+    ingredients: [
+      { id: 'waterSpinach', qty: 1, amount: '1 把' },
+      { id: 'garlic', qty: 3, amount: '3 瓣' },
+      { id: 'oil', qty: 1, amount: '適量' },
+      { id: 'salt', qty: 1, amount: '適量' }
+    ],
+    steps: [
+      '空心菜切段，梗和葉分開放。',
+      '熱鍋下油爆香蒜末，先下梗炒 30 秒。',
+      '下葉子大火快炒，加鹽拌勻起鍋。'
+    ],
+    tip: '梗先下、葉後下，口感才會一致。',
+    kcal: 100, protein: 4
+  },
+  {
+    id: 'bacon-cream-pasta',
+    name: '奶油培根義大利麵',
+    desc: '不用鮮奶油，牛奶加起司就能做出濃郁白醬。',
+    time: 25, diet: '葷', equip: ['瓦斯爐'], family: '麵',
+    tags: ['25 分鐘', '一鍋到底', '像餐廳'],
+    ingredients: [
+      { id: 'pasta', qty: 1, amount: '1 份' },
+      { id: 'bacon', qty: 2, amount: '2 片' },
+      { id: 'butter', qty: 1, amount: '20g' },
+      { id: 'milk', qty: 1, amount: '200ml' },
+      { id: 'cheese', qty: 1, amount: '1 片' },
+      { id: 'pepper', qty: 1, amount: '適量' }
+    ],
+    steps: [
+      '麵條煮 8 分鐘，留半碗煮麵水。',
+      '培根切小片乾煎出油，加奶油融化。',
+      '倒牛奶小火加熱，放起司片攪到融化。',
+      '下麵條拌勻，太稠就加煮麵水，撒黑胡椒。'
+    ],
+    tip: '牛奶不要煮滾，起司才不會結塊。',
+    kcal: 680, protein: 26
+  },
+  {
+    id: 'mackerel-miso',
+    name: '鯖魚味噌煮',
+    desc: '一鍋到底的日式家常菜，魚肉嫩、醬汁超下飯。',
+    time: 25, diet: '葷', equip: ['瓦斯爐'], family: '魚',
+    tags: ['25 分鐘', '一鍋到底', '下飯'],
+    ingredients: [
+      { id: 'mackerel', qty: 1, amount: '1 片' },
+      { id: 'miso', qty: 1, amount: '1 匙' },
+      { id: 'mirin', qty: 1, amount: '1 匙' },
+      { id: 'riceWine', qty: 1, amount: '1 匙' },
+      { id: 'sugar', qty: 1, amount: '1 小匙' },
+      { id: 'scallion', qty: 0.5, amount: '半把' }
+    ],
+    steps: [
+      '鯖魚切塊，用米酒略醃 5 分鐘。',
+      '鍋中放味醂、糖與 150ml 水煮滾。',
+      '下魚塊小火煮 8 分鐘，翻面一次。',
+      '味噌用一點湯汁化開倒入，煮 2 分鐘撒蔥花。'
+    ],
+    tip: '味噌最後放，香氣才不會被煮掉。',
+    kcal: 420, protein: 32
+  },
+  {
+    id: 'beef-bowl',
+    name: '牛肉丼飯',
+    desc: '洋蔥甜味加醬汁，一碗解決一餐。',
+    time: 20, diet: '葷', equip: ['瓦斯爐'], family: '飯',
+    tags: ['20 分鐘', '一鍋到底', '下飯'],
+    ingredients: [
+      { id: 'beef', qty: 1, amount: '100g' },
+      { id: 'onion', qty: 1, amount: '1/2 顆' },
+      { id: 'rice', qty: 1.5, amount: '1.5 碗' },
+      { id: 'egg', qty: 1, amount: '1 顆' },
+      { id: 'soy', qty: 1, amount: '2 匙' },
+      { id: 'mirin', qty: 1, amount: '1 匙' },
+      { id: 'sugar', qty: 1, amount: '1 小匙' }
+    ],
+    steps: [
+      '洋蔥切絲，醬油、味醂、糖加 100ml 水調成醬汁。',
+      '洋蔥下鍋炒軟，倒醬汁煮滾。',
+      '下牛肉片涮到變色，打蛋液繞圈倒入。',
+      '蓋鍋悶 30 秒，整鍋淋在白飯上。'
+    ],
+    tip: '牛肉最後下、變色就關火，才不會柴。',
+    kcal: 720, protein: 34
+  },
+  {
+    id: 'pumpkin-soup',
+    name: '南瓜濃湯',
+    desc: '不用調理機也能做，壓成泥就很濃。',
+    time: 30, diet: '蛋奶素', equip: ['瓦斯爐'], family: '湯',
+    tags: ['30 分鐘', '暖胃', '可帶便當'],
+    ingredients: [
+      { id: 'pumpkin', qty: 1, amount: '1/4 顆' },
+      { id: 'onion', qty: 0.5, amount: '1/4 顆' },
+      { id: 'milk', qty: 1, amount: '200ml' },
+      { id: 'butter', qty: 1, amount: '20g' },
+      { id: 'salt', qty: 1, amount: '適量' },
+      { id: 'pepper', qty: 1, amount: '適量' }
+    ],
+    steps: [
+      '南瓜去皮切小塊，洋蔥切丁。',
+      '奶油炒香洋蔥，下南瓜與 300ml 水煮 15 分鐘。',
+      '用湯匙把南瓜壓成泥。',
+      '倒牛奶小火拌勻，加鹽與黑胡椒。'
+    ],
+    tip: '南瓜切小塊一點，煮軟的時間可以少一半。',
+    kcal: 280, protein: 9
+  },
+  {
+    id: 'apple-yogurt-oats',
+    name: '蘋果優格燕麥杯',
+    desc: '不用開火，早上趕時間也能吃飽。',
+    time: 5, diet: '蛋奶素', equip: [], family: '早餐',
+    tags: ['5 分鐘', '免開火', '早餐'],
+    ingredients: [
+      { id: 'apple', qty: 1, amount: '1 顆' },
+      { id: 'yogurt', qty: 1, amount: '1 杯' },
+      { id: 'oats', qty: 1, amount: '30g' },
+      { id: 'honey', qty: 1, amount: '1 小匙' }
+    ],
+    steps: [
+      '蘋果切小丁。',
+      '杯底鋪燕麥，加優格拌一下。',
+      '放上蘋果丁，淋蜂蜜即可。'
+    ],
+    tip: '前一晚先泡好放冰箱，早上直接吃更省時間。',
+    kcal: 310, protein: 12
+  },
+  {
+    id: 'tofu-skin-cabbage',
+    name: '豆皮炒高麗菜',
+    desc: '豆皮吸飽湯汁，比肉還下飯。',
+    time: 15, diet: '全素', equip: ['瓦斯爐'], family: '菜',
+    tags: ['15 分鐘', '一鍋到底', '清冰箱'],
+    ingredients: [
+      { id: 'tofuSkin', qty: 2, amount: '2 片' },
+      { id: 'cabbage', qty: 1, amount: '1/4 顆' },
+      { id: 'carrot', qty: 0.5, amount: '1/3 根' },
+      { id: 'garlic', qty: 2, amount: '2 瓣' },
+      { id: 'soy', qty: 1, amount: '1 匙' }
+    ],
+    steps: [
+      '豆皮切條，高麗菜與紅蘿蔔切片。',
+      '熱鍋爆香蒜末，下紅蘿蔔與高麗菜炒軟。',
+      '加豆皮與醬油拌炒，加 50ml 水悶 2 分鐘。'
+    ],
+    tip: '豆皮先乾煎一下，比較不容易爛。',
+    kcal: 260, protein: 18
+  },
+  {
+    id: 'wood-ear-egg',
+    name: '木耳炒蛋',
+    desc: '脆脆木耳配軟蛋，口感很有層次。',
+    time: 15, diet: '蛋奶素', equip: ['瓦斯爐'], family: '蛋',
+    tags: ['15 分鐘', '一鍋到底', '補鐵'],
+    ingredients: [
+      { id: 'woodEar', qty: 1, amount: '1 盒' },
+      { id: 'egg', qty: 2, amount: '2 顆' },
+      { id: 'scallion', qty: 0.5, amount: '半把' },
+      { id: 'soy', qty: 1, amount: '1 匙' },
+      { id: 'sesameOil', qty: 1, amount: '1 小匙' }
+    ],
+    steps: [
+      '木耳切絲，蛋打散。',
+      '熱鍋下油炒蛋到半熟先盛起。',
+      '原鍋炒木耳與蔥段，加醬油。',
+      '蛋回鍋拌勻，起鍋前淋香油。'
+    ],
+    tip: '木耳下鍋前瀝乾一點，才不會噴油。',
+    kcal: 240, protein: 16
+  },
+  {
+    id: 'pineapple-shrimp',
+    name: '鳳梨蝦球',
+    desc: '罐頭鳳梨也能做的台式熱炒，酸甜開胃。',
+    time: 25, diet: '葷', equip: ['瓦斯爐'], family: '炸',
+    tags: ['25 分鐘', '像熱炒店', '請客'],
+    ingredients: [
+      { id: 'shrimp', qty: 1, amount: '1 份' },
+      { id: 'pineapple', qty: 1, amount: '1/4 顆' },
+      { id: 'mayo', qty: 1, amount: '2 匙' },
+      { id: 'flour', qty: 0.5, amount: '50g' },
+      { id: 'egg', qty: 1, amount: '1 顆' }
+    ],
+    steps: [
+      '蝦仁擦乾，沾蛋液再裹麵粉。',
+      '油溫約 170 度，下蝦仁炸到金黃撈起。',
+      '鳳梨切塊鋪盤，放上蝦球。',
+      '擠上美乃滋拌勻即可。'
+    ],
+    tip: '蝦仁一定要擦乾，粉才黏得住、炸起來才酥。',
+    kcal: 480, protein: 28
+  },
+  {
+    id: 'rice-noodle-soup',
+    name: '米粉湯',
+    desc: '一鍋煮到底的古早味，湯鮮又飽。',
+    time: 25, diet: '葷', equip: ['瓦斯爐'], family: '湯',
+    tags: ['25 分鐘', '一鍋到底', '暖胃'],
+    ingredients: [
+      { id: 'riceNoodle', qty: 1, amount: '1 份' },
+      { id: 'cabbage', qty: 0.5, amount: '1/8 顆' },
+      { id: 'mushroom', qty: 1, amount: '3 朵' },
+      { id: 'pork', qty: 0.5, amount: '50g' },
+      { id: 'stock', qty: 1, amount: '1 匙' },
+      { id: 'whitePepper', qty: 1, amount: '適量' },
+      { id: 'scallion', qty: 0.5, amount: '半把' }
+    ],
+    steps: [
+      '米粉泡水 5 分鐘，香菇泡軟切絲。',
+      '豬肉絲炒香，下香菇與高麗菜拌炒。',
+      '加 700ml 水與高湯粉煮滾。',
+      '下米粉煮 5 分鐘，撒白胡椒與蔥花。'
+    ],
+    tip: '米粉先泡過，煮起來才不會吸乾整鍋湯。',
+    kcal: 460, protein: 22
+  },
+  {
+    id: 'thai-basil-pork',
+    name: '打拋豬肉飯',
+    desc: '九層塔一撒下去，整鍋香到隔壁。',
+    time: 20, diet: '葷', equip: ['瓦斯爐'], family: '飯',
+    tags: ['20 分鐘', '一鍋到底', '超下飯'],
+    ingredients: [
+      { id: 'pork', qty: 1, amount: '100g' },
+      { id: 'basil', qty: 1, amount: '1 把' },
+      { id: 'rice', qty: 1.5, amount: '1.5 碗' },
+      { id: 'egg', qty: 1, amount: '1 顆' },
+      { id: 'garlic', qty: 3, amount: '3 瓣' },
+      { id: 'chiliSauce', qty: 1, amount: '1 匙' },
+      { id: 'soy', qty: 1, amount: '1 匙' },
+      { id: 'sugar', qty: 1, amount: '1 小匙' }
+    ],
+    steps: [
+      '蒜末爆香，下豬肉炒到變色。',
+      '加醬油、辣椒醬、糖與 50ml 水炒勻。',
+      '起鍋前下九層塔快速拌兩下。',
+      '配白飯，再煎一顆荷包蛋。'
+    ],
+    tip: '九層塔最後下，香氣才不會跑掉。',
+    kcal: 690, protein: 30
+  },
+  {
+    id: 'fish-fragrant-eggplant',
+    name: '魚香茄子',
+    desc: '沒有魚的魚香，豆瓣醬就是靈魂。',
+    time: 20, diet: '葷', equip: ['瓦斯爐'], family: '菜',
+    tags: ['20 分鐘', '下飯', '清冰箱'],
+    ingredients: [
+      { id: 'eggplant', qty: 1, amount: '1 條' },
+      { id: 'pork', qty: 0.5, amount: '50g' },
+      { id: 'garlic', qty: 3, amount: '3 瓣' },
+      { id: 'doubanjiang', qty: 1, amount: '1 匙' },
+      { id: 'soy', qty: 1, amount: '1 匙' },
+      { id: 'sugar', qty: 1, amount: '1 小匙' },
+      { id: 'vinegar', qty: 1, amount: '1 小匙' }
+    ],
+    steps: [
+      '茄子切段泡水 5 分鐘，瀝乾。',
+      '熱鍋多一點油，茄子煎到軟先盛起。',
+      '爆香蒜末與豆瓣醬，下絞肉炒散。',
+      '茄子回鍋，加醬油、糖、醋拌炒收汁。'
+    ],
+    tip: '茄子先泡水，比較不吃油也不會變黑。',
+    kcal: 340, protein: 14
+  },
+  {
+    id: 'udon-stirfry',
+    name: '烏龍麵炒肉',
+    desc: '一包烏龍麵加冰箱剩菜，五分鐘一盤。',
+    time: 15, diet: '葷', equip: ['瓦斯爐'], family: '麵',
+    tags: ['15 分鐘', '一鍋到底', '清冰箱'],
+    ingredients: [
+      { id: 'udon', qty: 1, amount: '1 包' },
+      { id: 'pork', qty: 0.5, amount: '50g' },
+      { id: 'cabbage', qty: 0.5, amount: '1/8 顆' },
+      { id: 'onion', qty: 0.5, amount: '1/4 顆' },
+      { id: 'soy', qty: 1, amount: '1 匙' },
+      { id: 'mirin', qty: 1, amount: '1 匙' }
+    ],
+    steps: [
+      '烏龍麵用熱水燙開，瀝乾。',
+      '洋蔥與豬肉下鍋炒香。',
+      '加高麗菜與麵條，倒醬油、味醂拌炒 2 分鐘。'
+    ],
+    tip: '麵條先燙開再炒，才不會黏成一團。',
+    kcal: 520, protein: 22
+  },
+  {
+    id: 'green-bean-pork',
+    name: '四季豆炒肉末',
+    desc: '鹹香下飯，便當菜首選。',
+    time: 15, diet: '葷', equip: ['瓦斯爐'], family: '菜',
+    tags: ['15 分鐘', '可帶便當', '下飯'],
+    ingredients: [
+      { id: 'greenBean', qty: 1, amount: '1 把' },
+      { id: 'pork', qty: 0.5, amount: '50g' },
+      { id: 'garlic', qty: 2, amount: '2 瓣' },
+      { id: 'soy', qty: 1, amount: '1 匙' },
+      { id: 'oysterSauce', qty: 1, amount: '1 匙' }
+    ],
+    steps: [
+      '四季豆切小段，先燙 2 分鐘撈起。',
+      '爆香蒜末，下絞肉炒散。',
+      '加四季豆、醬油與蠔油大火炒 2 分鐘。'
+    ],
+    tip: '四季豆先燙過，炒起來才會脆又熟透。',
+    kcal: 280, protein: 16
+  },
+  {
+    id: 'crabstick-steamed-egg',
+    name: '蟹味棒蒸蛋',
+    desc: '電鍋一按就好，滑嫩得像茶碗蒸。',
+    time: 20, diet: '葷', equip: ['電鍋'], family: '蛋',
+    tags: ['20 分鐘', '電鍋', '零失敗'],
+    ingredients: [
+      { id: 'crabstick', qty: 1, amount: '4 支' },
+      { id: 'egg', qty: 2, amount: '2 顆' },
+      { id: 'stock', qty: 1, amount: '1 匙' },
+      { id: 'soy', qty: 1, amount: '1 小匙' },
+      { id: 'scallion', qty: 0.5, amount: '半把' }
+    ],
+    steps: [
+      '蛋打散，加 1.5 倍溫水與高湯粉拌勻後過篩。',
+      '蟹味棒撕成絲鋪在碗底，倒入蛋液。',
+      '電鍋外鍋半杯水，鍋蓋留一點縫蒸 12 分鐘。',
+      '起鍋淋醬油、撒蔥花。'
+    ],
+    tip: '蛋液過篩、鍋蓋留縫，表面才會光滑沒孔洞。',
+    kcal: 220, protein: 18
+  },
+  {
+    id: 'celery-squid',
+    name: '芹菜炒花枝',
+    desc: '清脆芹菜配花枝，熱炒店的經典組合。',
+    time: 20, diet: '葷', equip: ['瓦斯爐'], family: '菜',
+    tags: ['20 分鐘', '快炒', '下飯'],
+    ingredients: [
+      { id: 'celery', qty: 1, amount: '1 把' },
+      { id: 'squid', qty: 1, amount: '1 份' },
+      { id: 'garlic', qty: 2, amount: '2 瓣' },
+      { id: 'riceWine', qty: 1, amount: '1 匙' },
+      { id: 'salt', qty: 1, amount: '適量' }
+    ],
+    steps: [
+      '芹菜切段，花枝切圈。',
+      '花枝先燙 30 秒撈起。',
+      '爆香蒜末，下芹菜大火炒 1 分鐘。',
+      '花枝回鍋，淋米酒加鹽拌炒起鍋。'
+    ],
+    tip: '花枝先燙再炒，才不會出一堆水。',
+    kcal: 260, protein: 26
+  },
+  {
+    id: 'radish-fishball-soup',
+    name: '蘿蔔魚丸湯',
+    desc: '湯頭自然回甘，冷天喝一碗很舒服。',
+    time: 30, diet: '葷', equip: ['瓦斯爐'], family: '湯',
+    tags: ['30 分鐘', '暖胃', '一鍋到底'],
+    ingredients: [
+      { id: 'radish', qty: 1, amount: '1/3 條' },
+      { id: 'fishball', qty: 1, amount: '5 顆' },
+      { id: 'stock', qty: 1, amount: '1 匙' },
+      { id: 'whitePepper', qty: 1, amount: '適量' },
+      { id: 'scallion', qty: 0.5, amount: '半把' }
+    ],
+    steps: [
+      '白蘿蔔切塊，加水 800ml 煮 15 分鐘。',
+      '下魚丸與高湯粉再煮 5 分鐘。',
+      '加白胡椒粉調味，撒蔥花。'
+    ],
+    tip: '蘿蔔煮到筷子能穿透，湯頭最甜。',
+    kcal: 210, protein: 15
+  },
+  {
+    id: 'luncheon-fried-rice',
+    name: '午餐肉蛋炒飯',
+    desc: '罐頭午餐肉煎香，炒飯直接升級。',
+    time: 15, diet: '葷', equip: ['瓦斯爐'], family: '飯',
+    tags: ['15 分鐘', '一鍋到底', '清冰箱'],
+    ingredients: [
+      { id: 'luncheon', qty: 1, amount: '2 片' },
+      { id: 'rice', qty: 1.5, amount: '1.5 碗' },
+      { id: 'egg', qty: 2, amount: '2 顆' },
+      { id: 'scallion', qty: 0.5, amount: '半把' },
+      { id: 'soy', qty: 1, amount: '1 匙' },
+      { id: 'pepper', qty: 1, amount: '適量' }
+    ],
+    steps: [
+      '午餐肉切丁，乾鍋煎到出油。',
+      '下蛋液炒散，加白飯炒鬆。',
+      '加醬油與黑胡椒拌炒，撒蔥花起鍋。'
+    ],
+    tip: '午餐肉本身有鹹，醬油只要一點點。',
+    kcal: 640, protein: 24
   }
 ];
 
@@ -2355,7 +2968,8 @@ const RECIPES = [
 const QUICK_INGREDIENTS = [
   'egg', 'rice', 'cabbage', 'onion', 'tofu', 'tomato', 'potato', 'carrot',
   'scallion', 'mushroom', 'enoki', 'kimchi', 'cheese', 'bread', 'milk',
-  'tuna', 'noodles', 'vermicelli', 'pork', 'chicken', 'dumpling', 'corn'
+  'tuna', 'noodles', 'vermicelli', 'pork', 'chicken', 'dumpling', 'corn',
+  'spinach', 'cucumber', 'bokchoy', 'bacon', 'beef', 'udon', 'butter', 'yogurt'
 ];
 
 </script>
@@ -2374,6 +2988,7 @@ const QUICK_INGREDIENTS = [
 
   const state = {
     selected: [],          // [{ id, expiring }]
+    seasonings: [],        // 家裡有的調味料 ids
     budget: 100,
     people: 1,
     maxTime: 30,
@@ -2384,6 +2999,13 @@ const QUICK_INGREDIENTS = [
     hasGenerated: false
   };
 
+  /* 所有調味料（含水；水永遠視為有） */
+  const SEASONING_IDS = Object.keys(INGREDIENTS).filter(id => INGREDIENTS[id].seasoning);
+  const SELECTABLE_SEASONING_IDS = SEASONING_IDS.filter(id => !INGREDIENTS[id].always);
+  const allSeasoningIds = () => SELECTABLE_SEASONING_IDS.slice();
+
+  state.seasonings = allSeasoningIds();
+
   /* ---------- DOM ---------- */
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -2392,9 +3014,19 @@ const QUICK_INGREDIENTS = [
     form: $('#fridgeForm'),
     ingredientInput: $('#ingredientInput'),
     quickChips: $('#quickChips'),
+    ingredientList: $('#ingredientList'),
     selectedList: $('#selectedList'),
     selectedCount: $('#selectedCount'),
     emptyIngredients: $('#emptyIngredients'),
+    tabIngredients: $('#tabIngredients'),
+    tabSeasonings: $('#tabSeasonings'),
+    paneIngredients: $('#paneIngredients'),
+    paneSeasonings: $('#paneSeasonings'),
+    seasoningList: $('#seasoningList'),
+    seasoningAllBtn: $('#seasoningAllBtn'),
+    seasoningNoneBtn: $('#seasoningNoneBtn'),
+    ingredientTabCount: $('#ingredientTabCount'),
+    seasoningTabCount: $('#seasoningTabCount'),
     budget: $('#budget'),
     budgetPresets: $('#budgetPresets'),
     peopleValue: $('#peopleValue'),
@@ -2450,6 +3082,13 @@ const QUICK_INGREDIENTS = [
     return state.selected.some(item => item.id === id);
   }
 
+  function hasSeasoning(id) {
+    const ing = INGREDIENTS[id];
+    if (!ing) return false;
+    if (ing.always) return true;
+    return state.seasonings.includes(id);
+  }
+
   function isExpiring(id) {
     const item = state.selected.find(entry => entry.id === id);
     return Boolean(item && item.expiring);
@@ -2483,8 +3122,8 @@ const QUICK_INGREDIENTS = [
     const ing = ingredientById(id);
     if (!ing) return false;
 
-    if (ing.pantry) {
-      if (!silent) toast(`「${ing.name}」是常備調味料，系統會自動算進去，不用加。`);
+    if (ing.seasoning) {
+      if (!silent) toast(`「${ing.name}」是調味料，請到「調味料」分頁勾選。`);
       return false;
     }
     if (hasIngredient(id)) {
@@ -2542,7 +3181,41 @@ const QUICK_INGREDIENTS = [
 
     el.selectedCount.textContent = `${state.selected.length} 樣`;
     el.emptyIngredients.hidden = state.selected.length > 0;
+    if (el.ingredientTabCount) el.ingredientTabCount.textContent = state.selected.length;
     renderQuickChips();
+  }
+
+  /* ---------- 調味料分頁 ---------- */
+  function renderSeasonings() {
+    if (!el.seasoningList) return;
+
+    el.seasoningList.innerHTML = SELECTABLE_SEASONING_IDS.map(id => {
+      const ing = INGREDIENTS[id];
+      const owned = hasSeasoning(id);
+      const priceHint = ing.price > 0 ? `<em class="chip-price">${money(ing.price)}</em>` : '';
+      return `<label><input type="checkbox" data-id="${id}" ${owned ? 'checked' : ''}><span>${ing.name}${priceHint}</span></label>`;
+    }).join('');
+
+    if (el.seasoningTabCount) el.seasoningTabCount.textContent = state.seasonings.length;
+  }
+
+  function switchTab(name) {
+    const isIngredients = name !== 'seasonings';
+    if (!el.tabIngredients || !el.tabSeasonings) return;
+
+    el.tabIngredients.classList.toggle('is-active', isIngredients);
+    el.tabSeasonings.classList.toggle('is-active', !isIngredients);
+    el.tabIngredients.setAttribute('aria-selected', String(isIngredients));
+    el.tabSeasonings.setAttribute('aria-selected', String(!isIngredients));
+    el.paneIngredients.hidden = !isIngredients;
+    el.paneSeasonings.hidden = isIngredients;
+  }
+
+  function setAllSeasonings(owned) {
+    state.seasonings = owned ? allSeasoningIds() : [];
+    renderSeasonings();
+    autoRefresh();
+    toast(owned ? '已假設所有調味料家裡都有。' : '已清空調味料，缺的會在食譜上標示。');
   }
 
   function syncFormFromState() {
@@ -2586,13 +3259,20 @@ const QUICK_INGREDIENTS = [
   }
 
   function computeStats(recipe) {
-    const nonPantry = recipe.ingredients.filter(item => !INGREDIENTS[item.id]?.pantry);
+    const items = recipe.ingredients.filter(item => INGREDIENTS[item.id]);
+    const nonPantry = items.filter(item => !INGREDIENTS[item.id].seasoning);
+    const seasoningItems = items.filter(item => INGREDIENTS[item.id].seasoning);
     const ownedItems = nonPantry.filter(item => hasIngredient(item.id));
     const missingItems = nonPantry.filter(item => !hasIngredient(item.id));
+    const missingSeasonings = seasoningItems.filter(item => !hasSeasoning(item.id));
     const expiringUsed = ownedItems.filter(item => isExpiring(item.id));
 
-    const perPersonMarket = nonPantry.reduce((sum, item) => sum + INGREDIENTS[item.id].price * item.qty, 0);
-    const perPersonMissing = missingItems.reduce((sum, item) => sum + INGREDIENTS[item.id].price * item.qty, 0);
+    const priceOf = item => INGREDIENTS[item.id].price * item.qty;
+
+    const perPersonMarket = items.reduce((sum, item) => sum + priceOf(item), 0);
+    const perPersonMissing =
+      missingItems.reduce((sum, item) => sum + priceOf(item), 0) +
+      missingSeasonings.reduce((sum, item) => sum + priceOf(item), 0);
 
     const marketCost = perPersonMarket * state.people;
     const missingCost = perPersonMissing * state.people;
@@ -2601,15 +3281,18 @@ const QUICK_INGREDIENTS = [
 
     return {
       nonPantry,
+      seasoningItems,
       ownedItems,
       missingItems,
+      missingSeasonings,
       expiringUsed,
       marketCost,
       missingCost,
       saved,
       coverage,
       ownedCount: ownedItems.length,
-      totalCount: nonPantry.length
+      totalCount: nonPantry.length,
+      missingSeasoningCount: missingSeasonings.length
     };
   }
 
@@ -2623,21 +3306,24 @@ const QUICK_INGREDIENTS = [
     // 2. 缺的食材越少越好
     score -= stats.missingItems.length * 6;
 
-    // 3. 快過期食材：強力加權
+    // 3. 缺調味料：輕微扣分，缺越多越後面
+    score -= stats.missingSeasonings.length * 5;
+
+    // 4. 快過期食材：強力加權
     score += stats.expiringUsed.length * 15;
 
-    // 4. 採購成本：越低越好，並依預算逞罰超支
+    // 5. 採購成本：越低越好，並依預算逞罰超支
     const budget = Math.max(state.budget, 1);
     score += Math.max(0, 1 - stats.missingCost / budget) * 22;
     score += stats.missingCost <= state.budget ? 14 : -30;
 
-    // 5. 時間符合
+    // 6. 時間符合
     score += recipe.time <= state.maxTime ? 7 : 0;
 
-    // 6. 換一批時，降低上一輪出現過的權重
+    // 7. 換一批時，降低上一輪出現過的權重
     if (jitter > 0 && previousIds.has(recipe.id)) score -= 16;
 
-    // 7. 只有「換一批」才加隨機；點食材即時更新時排序保持穩定
+    // 8. 只有「換一批」才加隨機；點食材即時更新時排序保持穩定
     score += Math.random() * jitter;
 
     return score;
@@ -2813,8 +3499,11 @@ const QUICK_INGREDIENTS = [
     const ingredientChips = recipe.ingredients.map(entry => {
       const ing = INGREDIENTS[entry.id];
       if (!ing) return '';
-      if (ing.pantry) {
-        return `<span class="ing-chip pantry" title="${entry.amount}">${ing.name}</span>`;
+      if (ing.seasoning) {
+        const ownedSeasoning = hasSeasoning(entry.id);
+        return ownedSeasoning
+          ? `<span class="ing-chip pantry" title="${entry.amount}">${ing.name}</span>`
+          : `<span class="ing-chip missing" title="${entry.amount}">缺 ${ing.name}</span>`;
       }
       const owned = hasIngredient(entry.id);
       const cost = ing.price * entry.qty * state.people;
@@ -2883,6 +3572,7 @@ const QUICK_INGREDIENTS = [
       .filter(Boolean);
 
     const shopMap = new Map();
+    const seasoningMap = new Map();
     const ownedSet = new Set();
     const expiringSet = new Set();
     let marketCost = 0;
@@ -2890,9 +3580,17 @@ const QUICK_INGREDIENTS = [
     recipes.forEach(recipe => {
       recipe.ingredients.forEach(entry => {
         const ing = INGREDIENTS[entry.id];
-        if (!ing || ing.pantry) return;
+        if (!ing) return;
 
-        marketCost += ing.price * entry.qty * state.people;
+        const lineCost = ing.price * entry.qty * state.people;
+        marketCost += lineCost;
+
+        if (ing.seasoning) {
+          if (!hasSeasoning(entry.id) && !seasoningMap.has(entry.id)) {
+            seasoningMap.set(entry.id, { id: entry.id, name: ing.name, cost: lineCost });
+          }
+          return;
+        }
 
         if (hasIngredient(entry.id)) {
           ownedSet.add(entry.id);
@@ -2915,11 +3613,15 @@ const QUICK_INGREDIENTS = [
       };
     }).sort((a, b) => b.cost - a.cost);
 
-    const missingCost = shopItems.reduce((sum, item) => sum + item.cost, 0);
+    const seasoningShop = Array.from(seasoningMap.values());
+    const missingCost =
+      shopItems.reduce((sum, item) => sum + item.cost, 0) +
+      seasoningShop.reduce((sum, item) => sum + item.cost, 0);
 
     return {
       recipes,
       shopItems,
+      seasoningShop,
       marketCost,
       missingCost,
       saved: marketCost - missingCost,
@@ -2958,6 +3660,12 @@ const QUICK_INGREDIENTS = [
       `).join('');
     } else {
       el.shoppingList.innerHTML = `<li class="menu-empty">冰箱全包，今天不用買菜！</li>`;
+    }
+
+    if (menu.seasoningShop.length) {
+      const names = menu.seasoningShop.map(item => item.name).join('、');
+      el.shoppingList.insertAdjacentHTML('beforeend',
+        `<li class="seasoning-need">缺調味料：${names}</li>`);
     }
 
     el.shoppingTotal.textContent = menu.missingCost === 0 ? 'NT$0' : money(menu.missingCost);
@@ -3075,6 +3783,7 @@ const QUICK_INGREDIENTS = [
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         selected: state.selected,
+        seasonings: state.seasonings,
         budget: state.budget,
         people: state.people,
         maxTime: state.maxTime,
@@ -3098,9 +3807,12 @@ const QUICK_INGREDIENTS = [
 
       state.selected = Array.isArray(saved.selected)
         ? saved.selected
-            .filter(item => item && INGREDIENTS[item.id] && !INGREDIENTS[item.id].pantry)
+            .filter(item => item && INGREDIENTS[item.id] && !INGREDIENTS[item.id].seasoning)
             .map(item => ({ id: item.id, expiring: Boolean(item.expiring) }))
         : [];
+      state.seasonings = Array.isArray(saved.seasonings)
+        ? saved.seasonings.filter(id => INGREDIENTS[id]?.seasoning && !INGREDIENTS[id].always)
+        : allSeasoningIds();
       state.budget = Number.isFinite(Number(saved.budget)) ? clamp(Number(saved.budget), 0, 2000) : 100;
       state.people = Number.isFinite(Number(saved.people)) ? clamp(Number(saved.people), 1, 6) : 1;
       state.maxTime = [10, 20, 30, 45].includes(Number(saved.maxTime)) ? Number(saved.maxTime) : 30;
@@ -3142,6 +3854,7 @@ const QUICK_INGREDIENTS = [
 
   function applyDemo({ generateResults = true, scroll = false } = {}) {
     state.selected = DEMO_STATE.selected.map(item => ({ ...item }));
+    state.seasonings = allSeasoningIds();
     state.budget = DEMO_STATE.budget;
     state.people = DEMO_STATE.people;
     state.maxTime = DEMO_STATE.maxTime;
@@ -3153,6 +3866,7 @@ const QUICK_INGREDIENTS = [
 
     syncFormFromState();
     renderIngredients();
+    renderSeasonings();
 
     if (generateResults) {
       generate({ scroll });
@@ -3162,6 +3876,7 @@ const QUICK_INGREDIENTS = [
 
   function resetAll() {
     state.selected = [];
+    state.seasonings = allSeasoningIds();
     state.budget = 100;
     state.people = 1;
     state.maxTime = 30;
@@ -3173,6 +3888,7 @@ const QUICK_INGREDIENTS = [
 
     syncFormFromState();
     renderIngredients();
+    renderSeasonings();
     el.resultsEmpty.hidden = false;
     el.resultsContent.hidden = true;
     el.menuPanel.hidden = true;
@@ -3214,6 +3930,30 @@ const QUICK_INGREDIENTS = [
         addIngredient(id);
       }
     });
+
+    // 食材 / 調味料 分頁
+    [el.tabIngredients, el.tabSeasonings].forEach(tab => {
+      if (!tab) return;
+      tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+    });
+
+    // 調味料：勾選家裡有沒有
+    if (el.seasoningList) {
+      el.seasoningList.addEventListener('change', event => {
+        const input = event.target.closest('input[data-id]');
+        if (!input) return;
+        const id = input.dataset.id;
+        if (input.checked) {
+          if (!state.seasonings.includes(id)) state.seasonings.push(id);
+        } else {
+          state.seasonings = state.seasonings.filter(item => item !== id);
+        }
+        if (el.seasoningTabCount) el.seasoningTabCount.textContent = state.seasonings.length;
+        autoRefresh();
+      });
+    }
+    if (el.seasoningAllBtn) el.seasoningAllBtn.addEventListener('click', () => setAllSeasonings(true));
+    if (el.seasoningNoneBtn) el.seasoningNoneBtn.addEventListener('click', () => setAllSeasonings(false));
 
     // 已選食材：快過期 / 移除
     el.selectedList.addEventListener('click', event => {
@@ -3344,12 +4084,40 @@ const QUICK_INGREDIENTS = [
   }
 
   /* ---------- 啟動 ---------- */
+  function renderIngredientOptions() {
+    if (!el.ingredientList) return;
+    el.ingredientList.innerHTML = Object.values(INGREDIENTS)
+      .filter(ing => !ing.seasoning)
+      .map(ing => `<option value="${ing.name}"></option>`)
+      .join('');
+  }
+
+  function renderDataCounts() {
+    const recipeCount = RECIPES.length;
+    const ingredientCount = Object.values(INGREDIENTS).filter(ing => !ing.seasoning).length;
+
+    const statNode = document.getElementById('statRecipeCount');
+    const compareNode = document.getElementById('compareRecipeCount');
+    const dataNode = document.getElementById('dataRecipeCount');
+    const ingNode = document.getElementById('dataIngredientCount');
+
+    if (statNode) statNode.textContent = recipeCount;
+    if (compareNode) compareNode.textContent = recipeCount;
+    if (dataNode) dataNode.textContent = recipeCount;
+    if (ingNode) ingNode.textContent = ingredientCount;
+  }
+
   function init() {
     bindEvents();
 
     const hasSaved = loadState();
+
     syncFormFromState();
+    renderIngredientOptions();
+    renderDataCounts();
     renderIngredients();
+    renderSeasonings();
+    switchTab('ingredients');
 
     if (state.selected.length > 0) {
       // 有選食材（不論是剛載入或上次留下的）：立刻算出並排序
