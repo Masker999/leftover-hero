@@ -1,0 +1,3339 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="月底省錢與冰箱剩食食譜產生器：輸入冰箱剩料與這餐預算，30 秒產生 3 道省錢菜單與採購清單。">
+  <title>剩食救星｜月底省錢與冰箱剩食食譜產生器</title>
+  <style>
+/* =========================================================
+   剩食救星 — 月底省錢與冰箱剩食食譜產生器
+   ========================================================= */
+
+:root {
+  --cream: #f7f1e3;
+  --cream-deep: #efe6d2;
+  --paper: #fffdf7;
+  --paper-2: #fbf7ec;
+  --ink: #1f2d27;
+  --ink-soft: #38463f;
+  --muted: #6f7d75;
+  --green: #1c6b4c;
+  --green-dark: #124a35;
+  --green-deep: #0f3b2a;
+  --green-soft: #e3f0e6;
+  --tomato: #d9533d;
+  --tomato-soft: #fbe7e2;
+  --mustard: #e3a92b;
+  --mustard-soft: #fbf0d0;
+  --line: #e4dcc9;
+  --line-strong: #d2c6ab;
+  --shadow: 0 12px 34px rgba(40, 50, 40, 0.07);
+  --shadow-lg: 0 24px 60px rgba(40, 50, 40, 0.12);
+  --radius: 18px;
+  --radius-sm: 12px;
+  --font: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "Heiti TC", system-ui, -apple-system, sans-serif;
+}
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+[hidden] { display: none !important; }
+
+html {
+  scroll-behavior: smooth;
+  background-color: var(--cream);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--ink);
+  background:
+    radial-gradient(900px 500px at 85% -8%, rgba(227, 169, 43, 0.16), transparent 60%),
+    radial-gradient(700px 500px at -10% 20%, rgba(28, 107, 76, 0.10), transparent 60%),
+    linear-gradient(180deg, #fcf8ee 0%, var(--cream) 55%, #f4eddc 100%);
+  background-color: var(--cream);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, p, ul, ol { margin: 0; }
+ul, ol { padding: 0; list-style: none; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+svg { display: block; }
+
+::selection { background: var(--mustard); color: var(--ink); }
+
+/* ---------- Header ---------- */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 14px clamp(18px, 4vw, 48px);
+  background: rgba(252, 248, 238, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(210, 198, 171, 0.55);
+}
+
+.brand { display: flex; align-items: center; gap: 11px; }
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  color: var(--paper);
+  background: linear-gradient(145deg, var(--green), var(--green-deep));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18), 0 6px 14px rgba(18, 74, 53, 0.22);
+}
+.brand-mark.small { width: 28px; height: 28px; }
+
+.brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+.brand-text strong { font-size: 17px; letter-spacing: 0.02em; }
+.brand-text small { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; }
+
+.site-nav { display: flex; align-items: center; gap: 26px; }
+.site-nav a {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  position: relative;
+  padding: 4px 0;
+}
+.site-nav a::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 100%; bottom: 0;
+  height: 2px;
+  background: var(--green);
+  transition: right 0.25s ease;
+}
+.site-nav a:hover::after { right: 0; }
+
+/* ---------- Layout ---------- */
+main { overflow: hidden; }
+
+.hero,
+.workspace,
+.menu-panel,
+.how,
+.about {
+  width: min(1240px, calc(100% - 40px));
+  margin-inline: auto;
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--green);
+  text-transform: uppercase;
+}
+.eyebrow .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--tomato);
+  box-shadow: 0 0 0 4px rgba(217, 83, 61, 0.12);
+}
+
+/* ---------- Hero ---------- */
+.hero {
+  display: grid;
+  grid-template-columns: 1.08fr 0.92fr;
+  align-items: center;
+  gap: clamp(28px, 5vw, 72px);
+  padding: clamp(48px, 7vw, 86px) 0 clamp(40px, 5vw, 64px);
+}
+
+.hero h1 {
+  margin-top: 18px;
+  font-size: clamp(42px, 5.6vw, 72px);
+  line-height: 1.14;
+  letter-spacing: -0.035em;
+  font-weight: 900;
+}
+.hero h1::after {
+  content: "";
+  display: block;
+  width: 92px;
+  height: 7px;
+  margin-top: 18px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--tomato), var(--mustard));
+}
+
+.hero-sub {
+  max-width: 32em;
+  margin-top: 22px;
+  font-size: clamp(15px, 1.3vw, 17px);
+  color: var(--ink-soft);
+}
+
+.hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+
+.hero-facts {
+  display: flex;
+  gap: clamp(20px, 3vw, 42px);
+  margin-top: 38px;
+  padding-top: 24px;
+  border-top: 1px dashed var(--line-strong);
+}
+.hero-facts li { display: flex; flex-direction: column; }
+.hero-facts strong { font-size: 22px; letter-spacing: -0.02em; color: var(--green-dark); }
+.hero-facts span { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 13px 24px;
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+  white-space: nowrap;
+}
+.btn:active { transform: translateY(1px) scale(0.995); }
+
+.btn-primary {
+  background: linear-gradient(145deg, var(--green), var(--green-deep));
+  color: var(--paper);
+  box-shadow: 0 10px 22px rgba(18, 74, 53, 0.22);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 28px rgba(18, 74, 53, 0.28); }
+
+.btn-ghost {
+  background: rgba(255, 253, 247, 0.72);
+  border-color: var(--line-strong);
+  color: var(--ink-soft);
+}
+.btn-ghost:hover { background: var(--paper); border-color: var(--green); color: var(--green-dark); transform: translateY(-1px); }
+
+.btn-sm { padding: 9px 16px; font-size: 13px; }
+
+/* Receipt */
+.receipt {
+  position: relative;
+  width: min(390px, 100%);
+  justify-self: center;
+  padding: 26px 28px 30px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), transparent 40%),
+    var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 4px 4px 14px 14px;
+  box-shadow: var(--shadow-lg);
+  transform: rotate(1.6deg);
+  font-size: 13.5px;
+}
+.receipt::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 1px dashed rgba(210, 198, 171, 0.7);
+  border-radius: 3px;
+  pointer-events: none;
+}
+.receipt::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -11px;
+  height: 12px;
+  background:
+    linear-gradient(-45deg, transparent 66%, var(--paper) 67%) 0 0 / 16px 16px repeat-x,
+    linear-gradient(45deg, transparent 66%, var(--paper) 67%) 0 0 / 16px 16px repeat-x;
+  filter: drop-shadow(0 2px 0 rgba(210, 198, 171, 0.4));
+}
+
+.receipt-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 14px;
+  border-bottom: 2px dashed var(--line-strong);
+}
+.receipt-brand { font-size: 17px; font-weight: 900; letter-spacing: 0.08em; }
+.receipt-date { font-size: 10px; letter-spacing: 0.16em; color: var(--muted); }
+
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 0;
+  color: var(--ink-soft);
+  border-bottom: 1px dotted var(--line);
+}
+.receipt-row span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; }
+.receipt-highlight { color: var(--tomato); }
+
+.receipt-divider { height: 16px; }
+
+.receipt-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 14px 0 4px;
+  border-top: 2px solid var(--ink);
+}
+.receipt-total span { font-size: 12px; letter-spacing: 0.1em; color: var(--muted); }
+.receipt-total strong { font-size: 26px; letter-spacing: -0.02em; color: var(--green-dark); }
+
+.receipt-note { margin-top: 12px; font-size: 10.5px; color: var(--muted); }
+
+.receipt-stamp {
+  position: absolute;
+  right: 22px;
+  bottom: 62px;
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  border: 3px double var(--tomato);
+  border-radius: 50%;
+  color: var(--tomato);
+  font-size: 10px;
+  line-height: 1.25;
+  text-align: center;
+  letter-spacing: 0.08em;
+  transform: rotate(-13deg);
+  opacity: 0.82;
+}
+.receipt-stamp b { font-size: 19px; letter-spacing: -0.02em; }
+
+/* ---------- Workspace ---------- */
+.workspace {
+  display: grid;
+  grid-template-columns: 400px minmax(0, 1fr);
+  align-items: start;
+  gap: 26px;
+  padding-bottom: 10px;
+  scroll-margin-top: 88px;
+}
+
+.panel {
+  background: rgba(255, 253, 247, 0.92);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.controls {
+  position: sticky;
+  top: 86px;
+  padding: 24px 22px 20px;
+  max-height: calc(100vh - 104px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+.controls::-webkit-scrollbar { width: 6px; }
+.controls::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 99px; }
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+}
+.panel-head h2 { font-size: 18px; letter-spacing: -0.01em; }
+
+.link-btn {
+  border: 0;
+  background: none;
+  padding: 4px;
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.link-btn:hover { color: var(--tomato); }
+
+.field-group { padding: 4px 0 18px; }
+.field-group:last-of-type { padding-bottom: 8px; }
+
+.field-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 11px;
+}
+.field-title h3 { font-size: 14px; font-weight: 700; letter-spacing: 0.01em; }
+
+.step-num {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--green-soft);
+  color: var(--green-dark);
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.field-count {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--muted);
+  background: var(--cream);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+
+.divider { border: 0; border-top: 1px dashed var(--line-strong); margin: 2px 0 16px; }
+
+/* Ingredient input */
+.ingredient-input { display: flex; gap: 8px; }
+
+.ingredient-input input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--paper);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.ingredient-input input::placeholder { color: #a9b0a9; }
+.ingredient-input input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(28, 107, 76, 0.12);
+}
+
+.btn-add {
+  flex: 0 0 auto;
+  padding: 0 18px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 13.5px;
+}
+.btn-add:hover { background: var(--green-dark); }
+
+.quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.quick-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink-soft);
+  font-size: 12px;
+  transition: all 0.16s ease;
+}
+.quick-chip:hover { border-color: var(--green); color: var(--green-dark); transform: translateY(-1px); }
+.quick-chip.is-added {
+  background: var(--green);
+  border-color: var(--green);
+  color: var(--paper);
+}
+.quick-chip .plus { font-size: 11px; opacity: 0.7; }
+
+.selected-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 14px;
+}
+.selected-list:empty { margin-top: 0; }
+
+.selected-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper-2);
+  animation: popIn 0.22s ease;
+}
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: none; }
+}
+
+.selected-item .ing-name { font-size: 13.5px; font-weight: 600; }
+.selected-item .ing-value { margin-left: auto; font-size: 11px; color: var(--muted); }
+
+.expire-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 10.5px;
+  transition: all 0.16s ease;
+}
+.expire-toggle:hover { border-color: var(--mustard); color: #8a6200; }
+.expire-toggle.is-on {
+  background: var(--mustard-soft);
+  border-color: var(--mustard);
+  color: #7c5900;
+  font-weight: 700;
+}
+.expire-toggle .mini-clock { font-size: 11px; }
+
+.remove-ing {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #a4aaa3;
+  font-size: 15px;
+  line-height: 1;
+  transition: all 0.15s;
+}
+.remove-ing:hover { background: var(--tomato-soft); color: var(--tomato); }
+
+.empty-inline {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.hint { margin-top: 9px; font-size: 11.5px; color: var(--muted); line-height: 1.55; }
+.mini-clock { color: var(--mustard); }
+
+/* Money */
+.money-input {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--paper);
+}
+.money-input:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px rgba(28, 107, 76, 0.12); }
+.currency { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; }
+.money-input input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.money-unit { font-size: 12px; color: var(--muted); }
+
+.preset-row { display: flex; gap: 6px; margin-top: 9px; }
+.preset-row button {
+  flex: 1;
+  padding: 6px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  transition: all 0.16s;
+}
+.preset-row button:hover { border-color: var(--green); color: var(--green-dark); }
+.preset-row button.is-active {
+  background: var(--green-soft);
+  border-color: var(--green);
+  color: var(--green-dark);
+  font-weight: 700;
+}
+
+/* Inline field */
+.field-inline { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.field-inline .field-title { margin-bottom: 0; }
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--paper);
+}
+.stepper button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 17px;
+  transition: background 0.15s;
+}
+.stepper button:hover { background: var(--green-soft); color: var(--green-dark); }
+.stepper span {
+  min-width: 24px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Segmented */
+.segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--paper-2);
+}
+.segmented label { position: relative; }
+.segmented input { position: absolute; opacity: 0; pointer-events: none; }
+.segmented span {
+  display: block;
+  padding: 7px 4px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--muted);
+  transition: all 0.18s;
+  cursor: pointer;
+}
+.segmented input:checked + span {
+  background: var(--paper);
+  color: var(--green-dark);
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(40, 50, 40, 0.09);
+}
+.segmented label:hover span { color: var(--green-dark); }
+
+/* Check chips */
+.check-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.check-chips label { position: relative; }
+.check-chips input { position: absolute; opacity: 0; pointer-events: none; }
+.check-chips span {
+  display: inline-block;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 12px;
+  transition: all 0.16s;
+  cursor: pointer;
+}
+.check-chips input:checked + span {
+  background: var(--green-soft);
+  border-color: var(--green);
+  color: var(--green-dark);
+  font-weight: 700;
+}
+.check-chips label:hover span { border-color: var(--green); }
+
+/* Generate */
+.btn-generate {
+  width: 100%;
+  margin-top: 6px;
+  padding: 15px 20px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, var(--green), var(--green-deep));
+  color: var(--paper);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  box-shadow: 0 12px 24px rgba(18, 74, 53, 0.24);
+}
+.btn-generate:hover { transform: translateY(-2px); box-shadow: 0 16px 30px rgba(18, 74, 53, 0.3); }
+
+.privacy-note {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+/* ---------- Results ---------- */
+.results { min-width: 0; padding-top: 4px; }
+
+.results-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 560px;
+  padding: 40px 28px;
+  text-align: center;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  background: rgba(255, 253, 247, 0.55);
+}
+.empty-illustration {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 150px;
+  height: 150px;
+  margin-bottom: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #fff, var(--cream-deep));
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.empty-pot { font-size: 62px; filter: drop-shadow(0 6px 10px rgba(40, 50, 40, 0.15)); }
+.empty-float {
+  position: absolute;
+  font-size: 22px;
+  animation: floaty 3.2s ease-in-out infinite;
+}
+.empty-float.f1 { top: 16px; right: 18px; animation-delay: 0s; }
+.empty-float.f2 { bottom: 22px; left: 8px; animation-delay: 0.6s; }
+.empty-float.f3 { top: 30px; left: 14px; animation-delay: 1.2s; }
+@keyframes floaty {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-8px) rotate(4deg); }
+}
+
+.results-empty h2 { font-size: clamp(22px, 2.4vw, 28px); letter-spacing: -0.02em; }
+.results-empty p { max-width: 30em; margin-top: 10px; color: var(--muted); font-size: 14px; }
+.results-empty .btn { margin-top: 22px; }
+
+.results-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 2px 16px;
+}
+.results-head h2 { margin-top: 6px; font-size: clamp(24px, 2.6vw, 32px); letter-spacing: -0.025em; }
+.results-head h2 span { color: var(--tomato); }
+.result-note { margin-top: 6px; font-size: 12.5px; color: var(--muted); }
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.stat {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 253, 247, 0.8);
+}
+.stat span { display: block; font-size: 10.5px; color: var(--muted); letter-spacing: 0.04em; }
+.stat strong { display: block; margin-top: 2px; font-size: 18px; letter-spacing: -0.02em; color: var(--green-dark); font-variant-numeric: tabular-nums; }
+.stat strong em { font-style: normal; font-size: 11px; color: var(--muted); font-weight: 500; margin-left: 2px; }
+
+.recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.recipe-card {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 16px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 0 4px 16px rgba(40, 50, 40, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  animation: cardIn 0.4s ease both;
+}
+.recipe-card:nth-child(2) { animation-delay: 0.06s; }
+.recipe-card:nth-child(3) { animation-delay: 0.12s; }
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+.recipe-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: var(--line-strong); }
+.recipe-card.is-top { border-color: var(--green); box-shadow: 0 10px 28px rgba(28, 107, 76, 0.12); }
+.recipe-card.is-selected { background: linear-gradient(180deg, #fffdf7, #f4faf5); }
+
+.card-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+}
+.rank {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.rank-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--green);
+  color: var(--paper);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.rank-badge.mustard { background: var(--mustard); color: #4d3600; }
+.rank-badge.tomato { background: var(--tomato); color: #fff; }
+.card-time {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.recipe-card h3 {
+  margin-top: 10px;
+  font-size: 17.5px;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+}
+.card-desc {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.5;
+  min-height: 2.9em;
+}
+
+.card-metrics {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1fr;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 9px 0;
+  border-top: 1px dashed var(--line);
+  border-bottom: 1px dashed var(--line);
+}
+.card-metrics div { min-width: 0; }
+.card-metrics span { display: block; font-size: 9.5px; color: var(--muted); }
+.card-metrics strong {
+  display: block;
+  font-size: 13.5px;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.card-metrics strong.money { color: var(--tomato); }
+.card-metrics strong.zero { color: var(--green); }
+
+.card-ingredients {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 10px;
+}
+.ing-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  line-height: 1.6;
+  border: 1px solid transparent;
+}
+.ing-chip.have { background: var(--green-soft); color: var(--green-dark); border-color: #cbe3d2; }
+.ing-chip.buy { background: var(--mustard-soft); color: #7c5900; border-color: #f0dca4; }
+.ing-chip.pantry { background: var(--cream); color: var(--muted); }
+
+.card-expiring {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: var(--tomato-soft);
+  color: #9b3a28;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.card-steps { margin-top: 10px; }
+.toggle-steps {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: none;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--green-dark);
+}
+.toggle-steps .chev { transition: transform 0.2s; font-size: 10px; }
+.toggle-steps[aria-expanded="true"] .chev { transform: rotate(180deg); }
+
+.steps-body { padding: 2px 0 8px; }
+.steps-body[hidden] { display: none; }
+.steps-body ol { counter-reset: step; display: flex; flex-direction: column; gap: 6px; }
+.steps-body li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 22px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.steps-body li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0; top: 1px;
+  display: grid;
+  place-items: center;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--green-soft);
+  color: var(--green-dark);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.card-tip {
+  margin-top: 6px;
+  padding: 7px 9px;
+  border-left: 2px solid var(--mustard);
+  background: #fdf8ea;
+  border-radius: 0 6px 6px 0;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: #6f5a1e;
+}
+
+.card-add {
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--green);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--green-dark);
+  font-size: 12px;
+  font-weight: 700;
+  transition: all 0.18s;
+}
+.card-add:hover { background: var(--green-soft); }
+.card-add.is-added { background: var(--green); color: var(--paper); }
+
+/* ---------- Menu panel ---------- */
+.menu-panel {
+  margin-top: 22px;
+  padding: clamp(22px, 3vw, 32px);
+  border-radius: 24px;
+  background:
+    radial-gradient(600px 260px at 100% 0%, rgba(227, 169, 43, 0.16), transparent 60%),
+    linear-gradient(150deg, var(--green-deep), #0a2c20);
+  color: #f4efdf;
+  box-shadow: 0 26px 60px rgba(10, 44, 32, 0.3);
+  scroll-margin-top: 88px;
+}
+.menu-panel[hidden] { display: none; }
+.menu-panel .eyebrow { color: #a8d8bd; }
+.menu-panel .eyebrow .dot { background: var(--mustard); box-shadow: 0 0 0 4px rgba(227, 169, 43, 0.15); }
+
+.menu-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(244, 239, 223, 0.16);
+}
+.menu-head h2 { margin-top: 4px; font-size: clamp(22px, 2.4vw, 30px); letter-spacing: -0.02em; }
+.menu-count { margin-left: 6px; font-size: 13px; font-weight: 500; color: #a8d8bd; letter-spacing: 0; }
+
+.budget-badge {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.budget-badge.ok { background: rgba(168, 216, 189, 0.16); color: #b9ebcf; border: 1px solid rgba(168, 216, 189, 0.35); }
+.budget-badge.over { background: rgba(217, 83, 61, 0.18); color: #ffb4a6; border: 1px solid rgba(217, 83, 61, 0.4); }
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(20px, 4vw, 48px);
+  padding: 20px 0 18px;
+}
+.menu-col { min-width: 0; }
+
+.menu-subtitle {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #a8d8bd;
+  text-transform: uppercase;
+}
+
+.menu-dishes { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.menu-dish {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+}
+.menu-dish .dish-name { font-size: 13.5px; font-weight: 600; }
+.menu-dish .dish-meta { margin-left: auto; font-size: 11px; color: #a8d8bd; white-space: nowrap; }
+.menu-dish .dish-remove {
+  display: grid;
+  place-items: center;
+  width: 20px; height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(244, 239, 223, 0.45);
+  font-size: 14px;
+}
+.menu-dish .dish-remove:hover { background: rgba(217, 83, 61, 0.25); color: #ffb4a6; }
+
+.menu-empty {
+  padding: 16px;
+  border: 1px dashed rgba(244, 239, 223, 0.25);
+  border-radius: 10px;
+  font-size: 12px;
+  color: rgba(244, 239, 223, 0.6);
+  text-align: center;
+}
+
+.budget-block { margin-top: 18px; }
+.budget-line { display: flex; justify-content: space-between; gap: 12px; font-size: 11.5px; color: #c7d8cc; }
+.budget-line strong { color: #fff; font-variant-numeric: tabular-nums; }
+.budget-bar {
+  height: 8px;
+  margin-top: 7px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+.budget-bar span {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7fd1a4, var(--mustard));
+  transition: width 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.3s;
+}
+.budget-bar.over span { background: linear-gradient(90deg, var(--mustard), var(--tomato)); }
+.budget-hint { margin-top: 7px; font-size: 10.5px; color: rgba(244, 239, 223, 0.55); }
+
+.shopping-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.shopping-total { font-size: 17px; font-weight: 800; color: var(--mustard); font-variant-numeric: tabular-nums; }
+
+.shopping-list { display: flex; flex-direction: column; gap: 2px; margin-top: 12px; }
+.shopping-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 4px;
+  border-bottom: 1px dotted rgba(244, 239, 223, 0.16);
+  font-size: 12.5px;
+}
+.shopping-item:last-child { border-bottom: 0; }
+.shopping-item input {
+  appearance: none;
+  width: 15px; height: 15px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(244, 239, 223, 0.45);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+}
+.shopping-item input:checked { background: var(--mustard); border-color: var(--mustard); }
+.shopping-item input:checked::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--green-deep);
+  font-size: 10px;
+  font-weight: 900;
+}
+.shopping-item label { flex: 1; cursor: pointer; }
+.shopping-item input:checked + label { text-decoration: line-through; color: rgba(244, 239, 223, 0.45); }
+.shopping-item .shop-qty { font-size: 10.5px; color: #a8d8bd; }
+.shopping-item .shop-price { font-size: 11.5px; color: var(--mustard); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.menu-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(244, 239, 223, 0.16);
+}
+.menu-savings { font-size: 11.5px; color: #c7d8cc; }
+.menu-savings strong { display: block; margin-top: 2px; font-size: 22px; color: var(--mustard); letter-spacing: -0.02em; }
+.menu-savings-note { font-size: 9.5px; color: rgba(244, 239, 223, 0.45); }
+.menu-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.menu-panel .btn-primary { background: var(--mustard); color: #3f2c00; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2); }
+.menu-panel .btn-primary:hover { background: #f0bc4a; }
+.menu-panel .btn-ghost { background: rgba(255, 255, 255, 0.06); border-color: rgba(244, 239, 223, 0.28); color: #f4efdf; }
+.menu-panel .btn-ghost:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(244, 239, 223, 0.55); color: #fff; }
+
+/* ---------- How ---------- */
+.how { padding: clamp(56px, 7vw, 92px) 0 20px; scroll-margin-top: 80px; }
+.section-head { max-width: 640px; }
+.section-head h2 { margin-top: 10px; font-size: clamp(28px, 3.4vw, 42px); line-height: 1.25; letter-spacing: -0.03em; }
+.section-head > p:last-child { margin-top: 12px; color: var(--muted); font-size: 14.5px; }
+
+.how-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 30px;
+}
+.how-card {
+  padding: 22px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 253, 247, 0.72);
+}
+.how-num {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--tomato);
+}
+.how-card h3 { margin-top: 10px; font-size: 17px; letter-spacing: -0.01em; }
+.how-card p { margin-top: 6px; font-size: 12.5px; color: var(--muted); line-height: 1.65; }
+
+.survival-tips {
+  margin-top: 12px;
+  padding: 22px 24px;
+  border-radius: var(--radius);
+  background: var(--mustard-soft);
+  border: 1px solid #eed9a0;
+}
+.survival-tips h3 { font-size: 14px; letter-spacing: 0.02em; }
+.survival-tips ul { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 12px; }
+.survival-tips li { font-size: 12px; color: #6f5a1e; line-height: 1.6; }
+.survival-tips b { display: block; color: #4d3d0e; font-size: 12.5px; }
+
+/* ---------- About ---------- */
+.about { padding: clamp(48px, 6vw, 76px) 0 clamp(40px, 5vw, 60px); scroll-margin-top: 80px; }
+.about-card {
+  display: grid;
+  grid-template-columns: 1.35fr 0.65fr;
+  gap: clamp(28px, 5vw, 64px);
+  padding: clamp(26px, 4vw, 44px);
+  border-radius: 24px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.about-card h2 { margin-top: 8px; font-size: clamp(24px, 2.8vw, 34px); letter-spacing: -0.025em; }
+.about-card p { margin-top: 12px; font-size: 13.5px; color: var(--ink-soft); line-height: 1.8; }
+.about-meta { display: flex; flex-direction: column; gap: 14px; padding-top: 8px; }
+.about-meta div { padding-bottom: 12px; border-bottom: 1px dashed var(--line); }
+.about-meta div:last-child { border-bottom: 0; }
+.about-meta span { display: block; font-size: 10.5px; letter-spacing: 0.1em; color: var(--muted); }
+.about-meta strong { display: block; margin-top: 3px; font-size: 12.5px; font-weight: 600; line-height: 1.5; }
+
+/* ---------- Footer ---------- */
+.site-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 26px clamp(18px, 4vw, 48px);
+  border-top: 1px solid var(--line);
+  background: rgba(252, 248, 238, 0.7);
+  font-size: 11px;
+  color: var(--muted);
+}
+.footer-brand { display: flex; align-items: center; gap: 9px; }
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  z-index: 100;
+  max-width: min(90vw, 420px);
+  padding: 11px 20px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 12.5px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+  transform: translate(-50%, 20px);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.28s ease, opacity 0.28s ease;
+}
+.toast.show { transform: translate(-50%, 0); opacity: 1; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1120px) {
+  .workspace { grid-template-columns: 360px minmax(0, 1fr); }
+  .recipe-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .recipe-card:nth-child(3) { grid-column: span 2; }
+}
+
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 1fr; padding-top: 40px; }
+  .receipt { justify-self: start; width: min(430px, 100%); transform: rotate(0.8deg); }
+  .workspace { grid-template-columns: 1fr; }
+  .controls { position: static; max-height: none; }
+  .results-empty { min-height: 360px; }
+  .recipe-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .recipe-card:nth-child(3) { grid-column: auto; }
+  .about-card { grid-template-columns: 1fr; }
+  .site-nav { gap: 16px; }
+  .site-nav a { font-size: 12.5px; }
+}
+
+@media (max-width: 760px) {
+  .site-nav { display: none; }
+  .hero-facts { gap: 22px; }
+  .recipe-grid { grid-template-columns: 1fr; }
+  .recipe-card:nth-child(3) { grid-column: auto; }
+  .stats-row { grid-template-columns: repeat(3, 1fr); }
+  .how-grid, .survival-tips ul { grid-template-columns: 1fr; }
+  .menu-grid { grid-template-columns: 1fr; }
+  .menu-footer { flex-direction: column; align-items: flex-start; }
+  .menu-actions { width: 100%; }
+  .menu-actions .btn { flex: 1; }
+  .site-footer { flex-direction: column; align-items: flex-start; gap: 8px; }
+}
+
+@media (max-width: 480px) {
+  .hero, .workspace, .menu-panel, .how, .about { width: calc(100% - 28px); }
+  .site-header { padding-inline: 14px; }
+  .hero h1 { font-size: 38px; }
+  .hero-facts { flex-wrap: wrap; row-gap: 16px; }
+  .receipt { padding: 22px 20px 26px; }
+  .receipt-stamp { width: 62px; height: 62px; font-size: 8.5px; bottom: 56px; right: 14px; }
+  .receipt-total strong { font-size: 22px; }
+  .stats-row { gap: 5px; }
+  .stat { padding: 10px; }
+  .stat strong { font-size: 15px; }
+  .card-metrics strong { font-size: 12.5px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- Print ---------- */
+@media print {
+  body { background: #fff; color: #000; }
+  .site-header, .hero, .workspace, .how, .about, .site-footer, .toast, .menu-actions, .budget-badge { display: none !important; }
+  .menu-panel {
+    display: block !important;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    color: #000;
+    box-shadow: none;
+    border-radius: 0;
+  }
+  .menu-panel .eyebrow, .menu-subtitle { color: #555; }
+  .menu-head { border-bottom: 2px solid #000; }
+  .menu-grid { grid-template-columns: 1fr 1fr; gap: 30px; }
+  .menu-dish, .menu-empty { background: #f4f4f4; border: 1px solid #ccc; color: #000; }
+  .menu-dish .dish-meta, .budget-line, .menu-savings, .menu-savings-note { color: #444; }
+  .budget-bar { background: #ddd; }
+  .shopping-item { border-bottom: 1px dotted #999; }
+  .shopping-item .shop-qty { color: #555; }
+  .shopping-item .shop-price, .shopping-total, .menu-savings strong { color: #000; }
+  .shopping-item input { border-color: #000; }
+  .menu-footer { border-top: 2px solid #000; }
+  .budget-hint { color: #555; }
+}
+
+</style>
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="剩食救星首頁">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 10h16v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7Z"/>
+          <path d="M2.5 10h19"/>
+          <path d="M9 6.5c0-1.5 1-2 1-3.5M13 6.5c0-1.5 1-2 1-3.5"/>
+        </svg>
+      </span>
+      <span class="brand-text">
+        <strong>剩食救星</strong>
+        <small>月底省錢食譜產生器</small>
+      </span>
+    </a>
+    <nav class="site-nav" aria-label="主要導覽">
+      <a href="#workspace">開始配菜</a>
+      <a href="#how">運作方式</a>
+      <a href="#about">關於專案</a>
+    </nav>
+  </header>
+
+  <main id="top">
+
+    <!-- ================= HERO ================= -->
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="dot"></span>月底限定・冰箱剩食計畫</p>
+        <h1>月底了，<br>冰箱還能再戰三天。</h1>
+        <p class="hero-sub">
+          把冰箱剩料和這餐預算交給我們，30 秒排出 3 道省錢菜單，
+          順便幫你算好還缺什麼、要花多少錢。
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#workspace">開始清冰箱</a>
+          <button class="btn btn-ghost" id="loadDemoBtn" type="button">載入範例冰箱</button>
+        </div>
+        <ul class="hero-facts">
+          <li><strong>30</strong><span>道家常食譜</span></li>
+          <li><strong>0 元</strong><span>也能變出一餐</span></li>
+          <li><strong>30 秒</strong><span>算完採購清單</span></li>
+        </ul>
+      </div>
+
+      <div class="receipt" aria-hidden="true">
+        <div class="receipt-top">
+          <span class="receipt-brand">月底剩食帳單</span>
+          <span class="receipt-date" id="receiptDate">NOV 2026</span>
+        </div>
+        <div class="receipt-row"><span>外送少叫 8 次</span><span>+ NT$2,400</span></div>
+        <div class="receipt-row"><span>清掉快過期食材</span><span>18 樣</span></div>
+        <div class="receipt-row"><span>這餐預估再花</span><span class="receipt-highlight" id="receiptCost">NT$35</span></div>
+        <div class="receipt-row"><span>冰箱食材市值</span><span>NT$168</span></div>
+        <div class="receipt-divider"></div>
+        <div class="receipt-total">
+          <span>月底餘額</span>
+          <strong>+ NT$1,860</strong>
+        </div>
+        <p class="receipt-note">* 依範例試算，實際依你的冰箱與預算而定</p>
+        <div class="receipt-stamp">已省<br><b>72%</b></div>
+      </div>
+    </section>
+
+    <!-- ================= WORKSPACE ================= -->
+    <section class="workspace" id="workspace">
+
+      <!-- 左側輸入面板 -->
+      <aside class="panel controls" aria-label="冰箱與預算設定">
+        <div class="panel-head">
+          <h2>你的冰箱 &amp; 預算</h2>
+          <button class="link-btn" id="resetBtn" type="button">重設</button>
+        </div>
+
+        <form id="fridgeForm" novalidate>
+
+          <!-- 1. 食材 -->
+          <div class="field-group">
+            <div class="field-title">
+              <span class="step-num">1</span>
+              <h3>冰箱裡還有什麼？</h3>
+              <span class="field-count" id="selectedCount">0 樣</span>
+            </div>
+
+            <div class="ingredient-input">
+              <input
+                type="text"
+                id="ingredientInput"
+                placeholder="輸入食材，例如：高麗菜"
+                autocomplete="off"
+                aria-label="輸入冰箱食材">
+              <button type="submit" class="btn btn-add" id="addIngredientBtn">加入</button>
+            </div>
+
+            <div class="quick-chips" id="quickChips" aria-label="常見食材快速加入"></div>
+
+            <ul class="selected-list" id="selectedList" aria-live="polite"></ul>
+            <p class="empty-inline" id="emptyIngredients">還沒加入食材。先點幾個常見食材，或按「載入範例冰箱」。</p>
+            <p class="hint">點食材旁的 <span class="mini-clock">⏱</span> 標記「快過期」，系統會優先幫你清掉。</p>
+          </div>
+
+          <hr class="divider">
+
+          <!-- 2. 預算 -->
+          <div class="field-group">
+            <div class="field-title">
+              <span class="step-num">2</span>
+              <h3>這餐最多花多少？</h3>
+            </div>
+            <div class="money-input">
+              <span class="currency">NT$</span>
+              <input type="number" id="budget" value="100" min="0" max="2000" step="10" inputmode="numeric" aria-label="這餐預算">
+              <span class="money-unit">元</span>
+            </div>
+            <div class="preset-row" id="budgetPresets">
+              <button type="button" data-budget="50">50</button>
+              <button type="button" data-budget="80">80</button>
+              <button type="button" data-budget="100" class="is-active">100</button>
+              <button type="button" data-budget="150">150</button>
+              <button type="button" data-budget="200">200</button>
+            </div>
+            <p class="hint">只計算「還需要買」的食材；冰箱裡已有的不算錢。</p>
+          </div>
+
+          <!-- 3. 人數 -->
+          <div class="field-group field-inline">
+            <div class="field-title">
+              <span class="step-num">3</span>
+              <h3>幾個人吃？</h3>
+            </div>
+            <div class="stepper" role="group" aria-label="用餐人數">
+              <button type="button" id="peopleMinus" aria-label="減少人數">−</button>
+              <span id="peopleValue" aria-live="polite">1</span>
+              <button type="button" id="peoplePlus" aria-label="增加人數">＋</button>
+            </div>
+          </div>
+
+          <!-- 4. 時間 -->
+          <div class="field-group">
+            <div class="field-title">
+              <span class="step-num">4</span>
+              <h3>最多願意花多久？</h3>
+            </div>
+            <div class="segmented" id="timeOptions" role="radiogroup" aria-label="烹調時間">
+              <label><input type="radio" name="time" value="10"><span>10 分</span></label>
+              <label><input type="radio" name="time" value="20"><span>20 分</span></label>
+              <label><input type="radio" name="time" value="30" checked><span>30 分</span></label>
+              <label><input type="radio" name="time" value="45"><span>45 分</span></label>
+            </div>
+          </div>
+
+          <!-- 5. 飲食 -->
+          <div class="field-group">
+            <div class="field-title">
+              <span class="step-num">5</span>
+              <h3>飲食習慣</h3>
+            </div>
+            <div class="segmented" id="dietOptions" role="radiogroup" aria-label="飲食習慣">
+              <label><input type="radio" name="diet" value="葷" checked><span>葷食</span></label>
+              <label><input type="radio" name="diet" value="蛋奶素"><span>蛋奶素</span></label>
+              <label><input type="radio" name="diet" value="全素"><span>全素</span></label>
+            </div>
+          </div>
+
+          <!-- 6. 器具 -->
+          <div class="field-group">
+            <div class="field-title">
+              <span class="step-num">6</span>
+              <h3>有什麼器具？</h3>
+            </div>
+            <div class="check-chips" id="equipOptions">
+              <label><input type="checkbox" name="equip" value="瓦斯爐" checked><span>瓦斯爐</span></label>
+              <label><input type="checkbox" name="equip" value="電鍋" checked><span>電鍋</span></label>
+              <label><input type="checkbox" name="equip" value="微波爐" checked><span>微波爐</span></label>
+              <label><input type="checkbox" name="equip" value="烤箱"><span>烤箱</span></label>
+              <label><input type="checkbox" name="equip" value="氣炸鍋"><span>氣炸鍋</span></label>
+            </div>
+          </div>
+
+          <button type="button" class="btn btn-generate" id="generateBtn">
+            <span>產生 3 道省錢菜單</span>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+          <p class="privacy-note">🔒 所有計算都在你的瀏覽器完成，不會上傳任何資料。</p>
+        </form>
+      </aside>
+
+      <!-- 右側結果 -->
+      <section class="results" aria-live="polite">
+
+        <div class="results-empty" id="resultsEmpty">
+          <div class="empty-illustration" aria-hidden="true">
+            <span class="empty-pot">🍲</span>
+            <span class="empty-float f1">🥚</span>
+            <span class="empty-float f2">🥬</span>
+            <span class="empty-float f3">🍚</span>
+          </div>
+          <h2>冰箱裡有什麼，就吃什麼。</h2>
+          <p>左邊選好食材與預算，按下「產生菜單」。<br>我們會依「快過期優先、預算、時間」幫你排出 3 道菜。</p>
+          <button class="btn btn-ghost" id="emptyDemoBtn" type="button">先看範例結果</button>
+        </div>
+
+        <div id="resultsContent" hidden>
+          <div class="results-head">
+            <div>
+              <p class="eyebrow"><span class="dot"></span>今晚的省錢提案</p>
+              <h2>替你找到 <span id="resultCount">3</span> 道菜</h2>
+              <p class="result-note" id="resultNote"></p>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="regenerateBtn" type="button">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
+              換一批
+            </button>
+          </div>
+
+          <div class="stats-row" id="resultStats"></div>
+          <div class="recipe-grid" id="recipeGrid"></div>
+        </div>
+      </section>
+    </section>
+
+    <!-- ================= 今晚菜單 ================= -->
+    <section class="menu-panel" id="menuPanel" hidden aria-label="今晚菜單與採購清單">
+      <div class="menu-head">
+        <div>
+          <p class="eyebrow"><span class="dot"></span>採購 &amp; 開煮</p>
+          <h2>今晚菜單 <span class="menu-count" id="menuCount">0 道</span></h2>
+        </div>
+        <div class="budget-badge" id="menuBudgetBadge">預算內</div>
+      </div>
+
+      <div class="menu-grid">
+        <div class="menu-col">
+          <h3 class="menu-subtitle">已選菜色</h3>
+          <ul class="menu-dishes" id="menuDishes"></ul>
+          <div class="budget-block">
+            <div class="budget-line">
+              <span>預算使用</span>
+              <strong id="menuBudgetText">NT$0 / NT$100</strong>
+            </div>
+            <div class="budget-bar"><span id="menuBar"></span></div>
+            <p class="budget-hint" id="menuBudgetHint"></p>
+          </div>
+        </div>
+
+        <div class="menu-col">
+          <div class="shopping-head">
+            <h3 class="menu-subtitle">還需要買</h3>
+            <span class="shopping-total" id="shoppingTotal">NT$0</span>
+          </div>
+          <ul class="shopping-list" id="shoppingList"></ul>
+        </div>
+      </div>
+
+      <div class="menu-footer">
+        <div class="menu-savings">
+          <span>冰箱已幫你省下</span>
+          <strong id="menuSavings">NT$0</strong>
+          <span class="menu-savings-note">（食材市值 − 需採購金額）</span>
+        </div>
+        <div class="menu-actions">
+          <button class="btn btn-ghost btn-sm" id="copyListBtn" type="button">複製採購清單</button>
+          <button class="btn btn-primary btn-sm" id="printListBtn" type="button">列印菜單</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= HOW ================= -->
+    <section class="how" id="how">
+      <div class="section-head">
+        <p class="eyebrow"><span class="dot"></span>怎麼做到的</p>
+        <h2>不是隨便推薦，是真的在算錢。</h2>
+        <p>每一道菜都會比對你的冰箱、預算、時間與飲食限制，再依「清冰箱指數」排序。</p>
+      </div>
+      <div class="how-grid">
+        <article class="how-card">
+          <span class="how-num">01</span>
+          <h3>盤點冰箱</h3>
+          <p>把你記得的剩料加進來，標記快過期的食材。系統會優先把它們排進菜單。</p>
+        </article>
+        <article class="how-card">
+          <span class="how-num">02</span>
+          <h3>比對 30 道家常菜</h3>
+          <p>依飲食、器具、時間過濾，再計算食材覆蓋率、快過期加權與採購成本。</p>
+        </article>
+        <article class="how-card">
+          <span class="how-num">03</span>
+          <h3>算出最低採購</h3>
+          <p>只買缺少的那幾樣，把「已花掉的食材」變成真正省下的錢，而不是放到壞掉。</p>
+        </article>
+      </div>
+      <div class="survival-tips">
+        <h3>月底生存守則</h3>
+        <ul>
+          <li><b>先吃快壞的</b>　葉菜、豆腐、牛奶優先，根莖類可以再撐幾天。</li>
+          <li><b>蛋白質減量、蔬菜增量</b>　肉變少但菜變多，飽足感不變、荷包更有感。</li>
+          <li><b>調味料是免費的魔法</b>　醬油、蒜、味噌能讓同一鍋飯變出三種味道。</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ================= ABOUT ================= -->
+    <section class="about" id="about">
+      <div class="about-card">
+        <div>
+          <p class="eyebrow"><span class="dot"></span>關於這個專案</p>
+          <h2>把「月底沒錢」變成「月底有菜」。</h2>
+          <p>
+            這是一個期末實作雛型，主題是「月底省錢與冰箱剩食」。靈感來自租屋族與學生最真實的月底情境：
+            錢包快見底、冰箱只剩半顆高麗菜和兩顆蛋，外送又貴得讓人心痛。
+          </p>
+          <p>
+            工具本身使用規則式推薦引擎，所有運算都在瀏覽器完成；開發過程則透過生成式 AI Agent 協助
+            需求拆解、資料建模、程式開發與測試。另附一組 n8n 自動化流程，每天提醒你「今天該清哪樣食材」。
+          </p>
+        </div>
+        <div class="about-meta">
+          <div><span>課程</span><strong>當機器人來上班－未來職場的 AI 必修課</strong></div>
+          <div><span>形式</span><strong>期末實作雛型</strong></div>
+          <div><span>技術</span><strong>HTML / CSS / JavaScript + n8n</strong></div>
+          <div><span>資料</span><strong>30 道家常食譜・台灣超市均價概估</strong></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-brand">
+      <span class="brand-mark small" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 10h16v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7Z"/>
+          <path d="M2.5 10h19"/>
+          <path d="M9 6.5c0-1.5 1-2 1-3.5M13 6.5c0-1.5 1-2 1-3.5"/>
+        </svg>
+      </span>
+      <span>剩食救星・月底省錢與冰箱剩食食譜產生器</span>
+    </div>
+    <p>價格為概估，實際依通路與季節而異。好好吃飯，也是一種省錢。</p>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+/* =========================================================
+   剩食救星 — 食材與食譜資料庫
+   價格為 2025–2026 台灣超市／傳統市場的概估均值（新台幣）
+   ========================================================= */
+
+const INGREDIENTS = {
+  rice:        { name: '白飯',       unit: '1 碗',   price: 10, cat: '主食',   aliases: ['飯', '隔夜飯', '白米', '米飯'] },
+  egg:         { name: '雞蛋',       unit: '1 顆',   price: 8,  cat: '蛋白質', aliases: ['蛋', '雞蛋'] },
+  cabbage:     { name: '高麗菜',     unit: '1/4 顆', price: 20, cat: '蔬菜',   aliases: ['高麗菜', '甘藍', '包心菜'] },
+  onion:       { name: '洋蔥',       unit: '1/2 顆', price: 10, cat: '蔬菜',   aliases: ['洋蔥'] },
+  carrot:      { name: '紅蘿蔔',     unit: '1/3 根', price: 5,  cat: '蔬菜',   aliases: ['紅蘿蔔', '胡蘿蔔'] },
+  potato:      { name: '馬鈴薯',     unit: '1 顆',   price: 12, cat: '主食',   aliases: ['馬鈴薯', '土豆'] },
+  tomato:      { name: '番茄',       unit: '1 顆',   price: 15, cat: '蔬菜',   aliases: ['番茄', '西紅柿', '牛番茄'] },
+  tofu:        { name: '板豆腐',     unit: '1 盒',   price: 20, cat: '蛋白質', aliases: ['豆腐', '板豆腐'] },
+  silkenTofu:  { name: '嫩豆腐',     unit: '1 盒',   price: 18, cat: '蛋白質', aliases: ['嫩豆腐', '雞蛋豆腐'] },
+  chicken:     { name: '雞胸肉',     unit: '100g',   price: 35, cat: '蛋白質', aliases: ['雞胸', '雞胸肉', '雞肉'] },
+  chickenLeg:  { name: '雞腿',       unit: '1 支',   price: 45, cat: '蛋白質', aliases: ['雞腿', '棒腿'] },
+  pork:        { name: '豬肉片',     unit: '100g',   price: 40, cat: '蛋白質', aliases: ['豬肉', '肉片', '豬肉片', '絞肉'] },
+  mushroom:    { name: '香菇',       unit: '3 朵',   price: 15, cat: '蔬菜',   aliases: ['香菇', '菇', '乾香菇'] },
+  enoki:       { name: '金針菇',     unit: '1 包',   price: 15, cat: '蔬菜',   aliases: ['金針菇', '金菇'] },
+  scallion:    { name: '青蔥',       unit: '1 把',   price: 10, cat: '蔬菜',   aliases: ['蔥', '青蔥', '蔥花'] },
+  garlic:      { name: '蒜頭',       unit: '2 瓣',   price: 3,  cat: '蔬菜',   aliases: ['蒜', '大蒜', '蒜頭', '蒜末'] },
+  kimchi:      { name: '泡菜',       unit: '1/3 罐', price: 25, cat: '蔬菜',   aliases: ['泡菜', '韓式泡菜'] },
+  cheese:      { name: '起司片',     unit: '1 片',   price: 10, cat: '乳製品', aliases: ['起司', '芝士', '乳酪'] },
+  bread:       { name: '吐司',       unit: '2 片',   price: 12, cat: '主食',   aliases: ['吐司', '麵包', '土司'] },
+  milk:        { name: '牛奶',       unit: '200ml',  price: 15, cat: '乳製品', aliases: ['牛奶', '鮮奶'] },
+  tuna:        { name: '鮪魚罐頭',   unit: '1 罐',   price: 35, cat: '蛋白質', aliases: ['鮪魚', '鮪魚罐', '罐頭'] },
+  noodles:     { name: '麵條',       unit: '1 份',   price: 12, cat: '主食',   aliases: ['麵', '麵條', '白麵'] },
+  instant:     { name: '泡麵',       unit: '1 包',   price: 18, cat: '主食',   aliases: ['泡麵', '速食麵', '科學麵'] },
+  vermicelli:  { name: '冬粉',       unit: '1 把',   price: 10, cat: '主食',   aliases: ['冬粉', '粉絲'] },
+  eggPancake:  { name: '蛋餅皮',     unit: '1 張',   price: 10, cat: '主食',   aliases: ['蛋餅皮', '餅皮', '蛋餅'] },
+  broccoli:    { name: '花椰菜',     unit: '1/2 顆', price: 25, cat: '蔬菜',   aliases: ['花椰菜', '綠花椰', '青花菜'] },
+  bellPepper:  { name: '青椒',       unit: '1 顆',   price: 15, cat: '蔬菜',   aliases: ['青椒', '甜椒'] },
+  corn:        { name: '玉米罐頭',   unit: '1/2 罐', price: 15, cat: '蔬菜',   aliases: ['玉米', '玉米罐', '玉米粒'] },
+  sprouts:     { name: '豆芽菜',     unit: '1 包',   price: 15, cat: '蔬菜',   aliases: ['豆芽', '豆芽菜'] },
+  sausage:     { name: '香腸',       unit: '1 根',   price: 15, cat: '蛋白質', aliases: ['香腸', '臘腸'] },
+  dumpling:    { name: '冷凍水餃',   unit: '8 顆',   price: 30, cat: '主食',   aliases: ['水餃', '冷凍水餃', '餃子'] },
+  pasta:       { name: '義大利麵',   unit: '1 份',   price: 15, cat: '主食',   aliases: ['義大利麵', '義麵', '通心麵'] },
+  curry:       { name: '咖哩塊',     unit: '1 小塊', price: 10, cat: '調味',   aliases: ['咖哩', '咖哩塊'] },
+  miso:        { name: '味噌',       unit: '1 匙',   price: 5,  cat: '調味',   aliases: ['味噌', '味增'] },
+  oats:        { name: '燕麥',       unit: '30g',    price: 5,  cat: '主食',   aliases: ['燕麥', '麥片', '燕麥片'] },
+  banana:      { name: '香蕉',       unit: '1 根',   price: 10, cat: '水果',   aliases: ['香蕉'] },
+  sweetPotato: { name: '地瓜',       unit: '1 條',   price: 15, cat: '主食',   aliases: ['地瓜', '番薯', '甘藷'] },
+  ham:         { name: '火腿',       unit: '2 片',   price: 15, cat: '蛋白質', aliases: ['火腿'] },
+  shrimp:      { name: '蝦仁',       unit: '1 份',   price: 45, cat: '蛋白質', aliases: ['蝦', '蝦仁'] },
+
+  /* 冰箱常備調味料：不計入採購成本 */
+  soy:         { name: '醬油',       unit: '適量',   price: 0,  cat: '調味', pantry: true, aliases: ['醬油', '生抽'] },
+  salt:        { name: '鹽',         unit: '適量',   price: 0,  cat: '調味', pantry: true, aliases: ['鹽', '食鹽'] },
+  oil:         { name: '油',         unit: '適量',   price: 0,  cat: '調味', pantry: true, aliases: ['油', '沙拉油', '橄欖油'] },
+  sugar:       { name: '糖',         unit: '適量',   price: 0,  cat: '調味', pantry: true, aliases: ['糖', '砂糖'] },
+  pepper:      { name: '胡椒',       unit: '適量',   price: 0,  cat: '調味', pantry: true, aliases: ['胡椒', '黑胡椒'] },
+  mayo:        { name: '美乃滋',     unit: '1 匙',   price: 0,  cat: '調味', pantry: true, aliases: ['美乃滋', '蛋黃醬'] },
+  water:       { name: '水',         unit: '適量',   price: 0,  cat: '調味', pantry: true, aliases: ['水'] }
+};
+
+/* 依「最低飲食限制」標記：全素 < 蛋奶素 < 葷 */
+const RECIPES = [
+  {
+    id: 'cabbage-fried-rice',
+    name: '高麗菜蛋炒飯',
+    desc: '隔夜飯的最佳歸宿，10 分鐘一鍋到底。',
+    time: 10, diet: '蛋奶素', equip: ['瓦斯爐'], family: '飯',
+    tags: ['10 分鐘', '一鍋到底', '清冰箱'],
+    ingredients: [
+      { id: 'rice', qty: 1.5, amount: '1.5 碗' },
+      { id: 'egg', qty: 1, amount: '1 顆' },
+      { id: 'cabbage', qty: 1, amount: '1/4 顆' },
+      { id: 'scallion', qty: 0.5, amount: '半把' },
+      { id: 'soy', qty: 1, amount: '1 匙' }
+    ],
+    steps: [
+      '熱鍋下油，蛋打散炒到半熟，先盛起。',
+      '原鍋炒香蔥白與高麗菜，加一點水蓋鍋悶 1 分鐘。',
+      '下白飯炒鬆，加醬油與鹽調味。',
+      '蛋回鍋拌炒，撒上蔥綠即可起鍋。'
+    ],
+    tip: '隔夜飯先用手撥鬆，炒起來才會粒粒分明。',
+    kcal: 520, protein: 18
+  },
+  {
+    id: 'tomato-tofu-egg-soup',
+    name: '番茄豆腐蛋花湯',
+    desc: '酸甜開胃，一鍋湯就能配一碗飯。',
+    time: 15, diet: '蛋奶素', equip: ['瓦斯爐'], family: '湯',
+    tags: ['15 分鐘', '暖胃', '清冰箱'],
+    ingredients: [
+      { id: 'tomato', qty: 1, amount: '1 顆' },
+      { id: 'tofu', qty: 1, amount: '1 盒' },
+      { id: 'egg', qty: 1, amount: '1 顆' },
+      { id: 'scallion', qty: 0.5, amount: '半把' },
+      { id: 'salt', qty: 1, amount: '適量' }
+    ],
+    steps: [
+      '番茄切塊，下鍋炒軟，加 600ml 水煮滾。',
+      '豆腐切塊下鍋，煮 3 分鐘。',
+      '蛋液繞圈倒入，靜置 10 秒再輕輕攪動。',
+      '加鹽調味，撒上蔥花。'
+    ],
+    tip: '番茄先炒過，湯頭會更甜、顏色也更紅。',
+    kcal: 260, protein: 20
+  },
+  {
+    id: 'onion-potato-pork',
+    name: '洋蔥馬鈴薯燉肉',
+    desc: '一鍋燉到底，湯汁拌飯超罪惡。',
+    time: 30, diet: '葷', equip: ['瓦斯爐'], family: '其他',
+    tags: ['一鍋到底', '下飯', '可帶便當'],
+    ingredients: [
+      { id: 'onion', qty: 1, amount: '1/2 顆' },
+      { id: 'potato', qty: 1, amount: '1 顆' },
+      { id: 'pork', qty: 1, amount: '100g' },
+      { id: 'carrot', qty: 0.5, amount: '1/3 根' },
+      { id: 'soy', qty: 1, amount: '2 匙' },
+      { id: 'sugar', qty: 1, amount: '1 匙' }
+    ],
+    steps: [
+      '洋蔥切絲炒到透明，下豬肉片炒至變色。',
+      '加入馬鈴薯、紅蘿蔔拌炒。',
+      '加醬油 2 匙、糖 1 匙與 300ml 水，煮滾後轉小火 15 分鐘。',
+      '開蓋收汁到喜歡的濃度。'
+    ],
+    tip: '馬鈴薯切大塊一點，燉完才不會化在湯裡。',
+    kcal: 560, protein: 26
+  },
+  {
+    id: 'kimchi-pork-fried-rice',
+    name: '泡菜豬肉炒飯',
+    desc: '泡菜汁就是天然調味，酸辣又下飯。',
+    time: 15, diet: '葷', equip: ['瓦斯爐'], family: '飯',
+    tags: ['15 分鐘', '一鍋到底', '重口味'],
+    ingredients: [
+      { id: 'rice', qty: 1.5, amount: '1.5 碗' },
+      { id: 'kimchi', qty: 1, amount: '1/3 罐' },
+      { id: 'pork', qty: 0.8, amount: '80g' },
+      { id: 'egg', qty: 1, amount: '1 顆' },
+      { id: 'scallion', qty: 0.5, amount: '半把' }
+    ],
+    steps: [
+      '豬肉片下鍋炒到變色。',
+      '加入泡菜與一點泡菜汁炒香。',
+      '下白飯炒鬆，試味道再補鹽。',
+      '煎一顆半熟蛋蓋上去，撒蔥花。'
+    ],
+    tip: '泡菜汁別浪費，連汁一起下鍋最夠味。',
+    kcal: 610, protein: 25
+  },
+  {
+    id: 'tuna-cheese-toast',
+    name: '起司鮪魚吐司披薩',
+    desc: '不用揉麵，吐司就是你的披薩底。',
+    time: 10, diet: '蛋奶素', equip: ['烤箱'], family: '吐司',
+    tags: ['10 分鐘', '免開火', '清冰箱'],
+    ingredients: [
+      { id: 'bread', qty: 1, amount: '2 片' },
+      { id: 'tuna', qty: 1, amount: '1 罐' },
+      { id: 'cheese', qty: 1, amount: '1 片' },
+      { id: 'onion', qty: 1, amount: '1/2 顆' },
+      { id: 'corn', qty: 1, amount: '1/2 罐' }
+    ],
+    steps: [
+      '吐司抹一點美乃滋，鋪上洋蔥絲。',
+      '鋪上鮪魚、玉米，最後蓋上起司片。',
+      '烤箱 200°C 烤 8 分鐘，起司融化即可。'
+    ],
+    tip: '吐司先烤 2 分鐘再放料，底部才不會濕軟。',
+    kcal: 430, protein: 24
+  },
+  {
+    id: 'chicken-veg-noodles',
+    name: '雞胸肉蔬菜炒麵',
+    desc: '蛋白質與蔬菜一次到位，比外送快又便宜。',
+    time: 20, diet: '葷', equip: ['瓦斯爐'], family: '麵',
+    tags: ['20 分鐘', '高蛋白', '一鍋到底'],
+    ingredients: [
+      { id: 'noodles', qty: 1, amount: '1 份' },
+      { id: 'chicken', qty: 1, amount: '100g' },
+      { id: 'cabbage', qty: 1, amount: '1/4 顆' },
+      { id: 'carrot', qty: 0.5, amount: '1/3 根' },
+      { id: 'garlic', qty: 1, amount: '2 瓣' },
+      { id: 'soy', qty: 1, amount: '2 匙' }
+    ],
+    steps: [
+      '麵條煮 8 分熟後撈起。',
+      '雞胸切片，用一點醬油抓醃 5 分鐘。',
+      '蒜爆香，下雞肉炒熟，再加入蔬菜。',
+      '下麵條與 2 匙煮麵水，拌炒均勻。'
+    ],
+    tip: '雞胸逆紋切、醃 5 分鐘，口感就不會柴。',
+    kcal: 540, protein: 35
+  },
+  {
+    id: 'microwave-steamed-egg',
+    name: '微波嫩豆腐蒸蛋',
+    desc: '不用開火，微波 6 分鐘就有滑嫩蒸蛋。',
+    time: 10, diet: '蛋奶素', equip: ['微波爐'], family: '蛋',
+    tags: ['10 分鐘', '免開火', '高蛋白'],
+    ingredients: [
+      { id: 'egg', qty: 2, amount: '2 顆' },
+      { id: 'silkenTofu', qty: 1, amount: '1 盒' },
+      { id: 'scallion', qty: 0.5, amount: '半把' },
+      { id: 'soy', qty: 1, amount: '1 匙' }
+    ],
+    steps: [
+      '雞蛋打散，加 150ml 溫水與一點鹽拌勻。',
+      '嫩豆腐切塊放碗底，倒入蛋液。',
+      '蓋上盤子，微波中火 5–6 分鐘。',
+      '淋上醬油、撒蔥花。'
+    ],
+    tip: '蛋液過篩一次，成品會像布丁一樣滑。',
+    kcal: 300, protein: 22
+  },
+  {
+    id: 'mushroom-chicken-soup',
+    name: '電鍋香菇雞湯',
+    desc: '電鍋按下去就能去洗澡，回來就有熱湯。',
+    time: 45, diet: '葷', equip: ['電鍋'], family: '湯',
+    tags: ['電鍋', '暖胃', '可帶便當'],
+    ingredients: [
+      { id: 'chickenLeg', qty: 1, amount: '1 支' },
+      { id: 'mushroom', qty: 1, amount: '3 朵' },
+      { id: 'garlic', qty: 1, amount: '2 瓣' },
+      { id: 'scallion', qty: 0.5, amount: '半把' },
+      { id: 'salt', qty: 1, amount: '適量' }
+    ],
+    steps: [
+      '雞腿剁塊，冷水下鍋燙去血水。',
+      '雞腿、香菇、蒜頭放入內鍋，加水蓋過食材。',
+      '外鍋放 2 杯水，按下開關。',
+      '跳起後加鹽調味，撒上蔥花。'
+    ],
+    tip: '乾香菇先泡軟，泡香菇的水一起煮會更香。',
+    kcal: 480, protein: 32
+  },
+  {
+    id: 'curry-chicken-rice',
+    name: '咖哩馬鈴薯雞肉飯',
+    desc: '一鍋咖哩吃兩餐，月底的超值選擇。',
+    time: 35, diet: '葷', equip: ['瓦斯爐', '電鍋'], family: '飯',
+    tags: ['一鍋到底', '可帶便當', '大份量'],
+    ingredients: [
+      { id: 'rice', qty: 1.5, amount: '1.5 碗' },
+      { id: 'potato', qty: 1, amount: '1 顆' },
+      { id: 'carrot', qty: 0.5, amount: '1/3 根' },
+      { id: 'onion', qty: 1, amount: '1/2 顆' },
+      { id: 'chicken', qty: 1, amount: '100g' },
+      { id: 'curry', qty: 1, amount: '1 小塊' }
+    ],
+    steps: [
+      '洋蔥炒軟，下雞肉煎到表面金黃。',
+      '加馬鈴薯、紅蘿蔔與 400ml 水，煮 15 分鐘。',
+      '關火放入咖哩塊攪散，再開小火煮 5 分鐘。',
+      '淋在白飯上即可。'
+    ],
+    tip: '咖哩塊關火後再放，才不會結塊。',
+    kcal: 680, protein: 30
+  },
+  {
+    id: 'tuna-corn-egg-pancake',
+    name: '鮪魚玉米蛋餅',
+    desc: '早餐店一份 60 元，自己做 25 元有找。',
+    time: 10, diet: '蛋奶素', equip: ['瓦斯爐'], family: '蛋',
+    tags: ['10 分鐘', '早餐', '清冰箱'],
+    ingredients: [
+      { id: 'eggPancake', qty: 1, amount: '1 張' },
+      { id: 'tuna', qty: 1, amount: '1 罐' },
+      { id: 'corn', qty: 1, amount: '1/2 罐' },
+      { id: 'egg', qty: 1, amount: '1 顆' },
+      { id: 'cheese', qty: 1, amount: '1 片' }
+    ],
+    steps: [
+      '蛋打散，加入玉米拌勻。',
+      '平底鍋下蛋液，趁半凝固時蓋上蛋餅皮。',
+      '翻面後鋪上鮪魚與起司，捲起來切段。'
+    ],
+    tip: '蛋液半凝固時就蓋餅皮，兩者才會黏在一起。',
+    kcal: 460, protein: 26
+  },
+  {
+    id: 'soy-vermicelli',
+    name: '醬油炒冬粉',
+    desc: '冬粉吸飽醬汁，一盤不到 30 元。',
+    time: 15, diet: '全素', equip: ['瓦斯爐'], family: '麵',
+    tags: ['15 分鐘', '全素', '銅板價'],
+    ingredients: [
+      { id: 'vermicelli', qty: 1, amount: '1 把' },
+      { id: 'cabbage', qty: 1, amount: '1/4 顆' },
+      { id: 'carrot', qty: 0.5, amount: '1/3 根' },
+      { id: 'mushroom', qty: 1, amount: '3 朵' },
+      { id: 'garlic', qty: 1, amount: '2 瓣' },
+      { id: 'soy', qty: 1, amount: '2 匙' }
+    ],
+    steps: [
+      '冬粉泡冷水 10 分鐘，剪短備用。',
+      '蒜與香菇炒香，下高麗菜、紅蘿蔔。',
+      '加入冬粉、醬油 2 匙與 100ml 水，拌炒到收汁。'
+    ],
+    tip: '冬粉泡軟就好，泡太久炒的時候會爛。',
+    kcal: 380, protein: 8
+  },
+  {
+    id: 'mapo-tofu',
+    name: '麻婆豆腐',
+    desc: '白飯殺手，辣度自己調。',
+    time: 20, diet: '葷', equip: ['瓦斯爐'], family: '其他',
+    tags: ['20 分鐘', '下飯', '清冰箱'],
+    ingredients: [
+      { id: 'tofu', qty: 1, amount: '1 盒' },
+      { id: 'pork', qty: 0.8, amount: '80g' },
+      { id: 'scallion', qty: 0.5, amount: '半把' },
+      { id: 'garlic', qty: 1, amount: '2 瓣' },
+      { id: 'soy', qty: 1, amount: '2 匙' }
+    ],
+    steps: [
+      '豆腐切塊，用鹽水燙 2 分鐘後撈起。',
+      '豬肉末炒香，加蒜末與辣豆瓣醬（或醬油）炒紅。',
+      '加 150ml 水與豆腐，煮 5 分鐘。',
+      '勾薄芡，撒上蔥花。'
+    ],
+    tip: '豆腐先燙過，下鍋才不容易碎。',
+    kcal: 420, protein: 24
+  },
+  {
+    id: 'milk-cheese-bake',
+    name: '牛奶起司焗烤吐司',
+    desc: '把冰箱邊角料全部鋪上去，烤到金黃。',
+    time: 20, diet: '蛋奶素', equip: ['烤箱'], family: '吐司',
+    tags: ['20 分鐘', '清冰箱', '邪惡系'],
+    ingredients: [
+      { id: 'bread', qty: 1, amount: '2 片' },
+      { id: 'milk', qty: 1, amount: '200ml' },
+      { id: 'cheese', qty: 1, amount: '1 片' },
+      { id: 'corn', qty: 1, amount: '1/2 罐' },
+      { id: 'mushroom', qty: 1, amount: '3 朵' }
+    ],
+    steps: [
+      '吐司切塊放烤皿，鋪上玉米與香菇。',
+      '牛奶加一點鹽拌勻，淋在吐司上。',
+      '鋪上起司片，200°C 烤 12 分鐘。'
+    ],
+    tip: '牛奶不要淋太多，吐司吸飽就好，才不會爛。',
+    kcal: 480, protein: 20
+  },
+  {
+    id: 'sweet-potato-oat',
+    name: '地瓜燕麥粥',
+    desc: '月底早餐救星，一碗不到 20 元。',
+    time: 15, diet: '全素', equip: ['瓦斯爐'], family: '其他',
+    tags: ['15 分鐘', '全素', '早餐'],
+    ingredients: [
+      { id: 'sweetPotato', qty: 1, amount: '1 條' },
+      { id: 'oats', qty: 2, amount: '60g' },
+      { id: 'salt', qty: 1, amount: '少許' }
+    ],
+    steps: [
+      '地瓜切小塊，加水 400ml 煮 8 分鐘。',
+      '加入燕麥片，再煮 3 分鐘。',
+      '加一點鹽提味；喜歡甜的可加糖。'
+    ],
+    tip: '地瓜切越小塊越快軟，趕時間就切丁。',
+    kcal: 320, protein: 8
+  },
+  {
+    id: 'sprouts-chicken',
+    name: '涼拌豆芽雞絲',
+    desc: '清爽不油膩，做好冰起來當隔天便當。',
+    time: 20, diet: '葷', equip: ['瓦斯爐'], family: '其他',
+    tags: ['20 分鐘', '高蛋白', '可帶便當'],
+    ingredients: [
+      { id: 'sprouts', qty: 1, amount: '1 包' },
+      { id: 'chicken', qty: 1, amount: '100g' },
+      { id: 'carrot', qty: 0.5, amount: '1/3 根' },
+      { id: 'garlic', qty: 1, amount: '2 瓣' },
+      { id: 'soy', qty: 1, amount: '1 匙' }
+    ],
+    steps: [
+      '豆芽與紅蘿蔔絲燙 1 分鐘，泡冰水。',
+      '雞胸煮熟放涼，撕成絲。',
+      '蒜末、醬油、一點糖與香油拌成醬。',
+      '全部拌勻，冷藏 10 分鐘。'
+    ],
+    tip: '燙好的蔬菜泡冰水，口感才會脆。',
+    kcal: 300, protein: 32
+  },
+  {
+    id: 'pepper-pork',
+    name: '青椒炒肉片',
+    desc: '便當店經典菜，自己炒肉多一倍。',
+    time: 15, diet: '葷', equip: ['瓦斯爐'], family: '其他',
+    tags: ['15 分鐘', '下飯', '可帶便當'],
+    ingredients: [
+      { id: 'bellPepper', qty: 1, amount: '1 顆' },
+      { id: 'pork', qty: 1, amount: '100g' },
+      { id: 'garlic', qty: 1, amount: '2 瓣' },
+      { id: 'soy', qty: 1, amount: '1 匙' }
+    ],
+    steps: [
+      '青椒切塊，乾鍋煸 30 秒先盛起。',
+      '蒜爆香，下豬肉片炒熟。',
+      '青椒回鍋，加醬油與一點糖大火快炒。'
+    ],
+    tip: '青椒先乾煸，香氣出來又不會軟爛。',
+    kcal: 380, protein: 24
+  },
+  {
+    id: 'broccoli-soup',
+    name: '花椰菜起司濃湯',
+    desc: '把花椰菜變成濃湯，小孩也會喝。',
+    time: 25, diet: '蛋奶素', equip: ['瓦斯爐'], family: '湯',
+    tags: ['25 分鐘', '暖胃', '清冰箱'],
+    ingredients: [
+      { id: 'broccoli', qty: 1, amount: '1/2 顆' },
+      { id: 'milk', qty: 1, amount: '200ml' },
+      { id: 'cheese', qty: 1, amount: '1 片' },
+      { id: 'potato', qty: 1, amount: '1 顆' },
+      { id: 'onion', qty: 1, amount: '1/2 顆' }
+    ],
+    steps: [
+      '洋蔥與馬鈴薯炒軟，加水 300ml 煮 10 分鐘。',
+      '加入花椰菜，再煮 5 分鐘。',
+      '用調理棒打碎（或壓成泥）。',
+      '加入牛奶與起司，小火拌勻。'
+    ],
+    tip: '起司最後加，煮滾容易油水分離。',
+    kcal: 360, protein: 16
+  },
+  {
+    id: 'kimchi-tofu-pot',
+    name: '泡菜豆腐鍋',
+    desc: '酸辣湯底，冰箱有什麼就加什麼。',
+    time: 20, diet: '蛋奶素', equip: ['瓦斯爐'], family: '湯',
+    tags: ['20 分鐘', '暖胃', '清冰箱'],
+    ingredients: [
+      { id: 'kimchi', qty: 1, amount: '1/3 罐' },
+      { id: 'tofu', qty: 1, amount: '1 盒' },
+      { id: 'egg', qty: 1, amount: '1 顆' },
+      { id: 'mushroom', qty: 1, amount: '3 朵' },
+      { id: 'scallion', qty: 0.5, amount: '半把' }
+    ],
+    steps: [
+      '泡菜下鍋炒香，加水 500ml 煮滾。',
+      '加入豆腐、香菇，煮 5 分鐘。',
+      '打一顆蛋，蓋鍋悶 1 分鐘。',
+      '撒蔥花，試味道。'
+    ],
+    tip: '泡菜先炒過，湯頭會更濃郁。',
+    kcal: 340, protein: 22
+  },
+  {
+    id: 'sausage-fried-rice',
+    name: '香腸蛋炒飯',
+    desc: '香腸的油脂就是最好的調味。',
+    time: 15, diet: '葷', equip: ['瓦斯爐'], family: '飯',
+    tags: ['15 分鐘', '一鍋到底', '清冰箱'],
+    ingredients: [
+      { id: 'rice', qty: 1.5, amount: '1.5 碗' },
+      { id: 'sausage', qty: 1, amount: '1 根' },
+      { id: 'egg', qty: 1, amount: '1 顆' },
+      { id: 'cabbage', qty: 1, amount: '1/4 顆' },
+      { id: 'scallion', qty: 0.5, amount: '半把' }
+    ],
+    steps: [
+      '香腸切丁，乾鍋煎出油。',
+      '加蛋炒散，再下高麗菜。',
+      '下白飯炒鬆，加一點醬油。',
+      '撒蔥花起鍋。'
+    ],
+    tip: '香腸先煎出油，就不用另外加油。',
+    kcal: 640, protein: 22
+  },
+  {
+    id: 'pan-fry-dumpling',
+    name: '冰花煎餃加蛋',
+    desc: '冷凍水餃變身脆皮煎餃，比水煮更有儀式感。',
+    time: 15, diet: '葷', equip: ['瓦斯爐'], family: '餃',
+    tags: ['15 分鐘', '一鍋到底', '宵夜'],
+    ingredients: [
+      { id: 'dumpling', qty: 1, amount: '8 顆' },
+      { id: 'egg', qty: 1, amount: '1 顆' },
+      { id: 'cabbage', qty: 0.5, amount: '1/8 顆' },
+      { id: 'soy', qty: 1, amount: '1 匙' }
+    ],
+    steps: [
+      '平底鍋放油，水餃排好，中火煎 2 分鐘。',
+      '加 100ml 水，蓋鍋煮 6 分鐘。',
+      '水收乾後淋上蛋液，煎到邊緣金黃。'
+    ],
+    tip: '水餃不用退冰，直接下鍋最好吃。',
+    kcal: 520, protein: 24
+  },
+  {
+    id: 'garlic-pasta',
+    name: '蒜香清炒義大利麵',
+    desc: '蒜香與橄欖油，簡單卻不無聊。',
+    time: 20, diet: '全素', equip: ['瓦斯爐'], family: '麵',
+    tags: ['20 分鐘', '全素', '銅板價'],
+    ingredients: [
+      { id: 'pasta', qty: 1, amount: '1 份' },
+      { id: 'garlic', qty: 2, amount: '4 瓣' },
+      { id: 'broccoli', qty: 0.5, amount: '1/4 顆' },
+      { id: 'salt', qty: 1, amount: '適量' },
+      { id: 'pepper', qty: 1, amount: '適量' }
+    ],
+    steps: [
+      '義大利麵煮 9 分鐘，留一杯煮麵水。',
+      '蒜片用油小火煸到金黃。',
+      '加花椰菜與麵條拌炒，分次加入煮麵水。',
+      '加鹽、胡椒調味。'
+    ],
+    tip: '煮麵水有澱粉，是讓醬汁附著麵條的秘密。',
+    kcal: 450, protein: 14
+  },
+  {
+    id: 'tuna-onion-rice',
+    name: '鮪魚洋蔥拌飯',
+    desc: '不用開火，拌一拌就是一碗。',
+    time: 10, diet: '葷', equip: ['微波爐'], family: '飯',
+    tags: ['10 分鐘', '免開火', '清冰箱'],
+    ingredients: [
+      { id: 'rice', qty: 1.5, amount: '1.5 碗' },
+      { id: 'tuna', qty: 1, amount: '1 罐' },
+      { id: 'onion', qty: 0.5, amount: '1/4 顆' },
+      { id: 'egg', qty: 1, amount: '1 顆' },
+      { id: 'mayo', qty: 1, amount: '1 匙' },
+      { id: 'soy', qty: 1, amount: '少許' }
+    ],
+    steps: [
+      '白飯微波加熱。',
+      '洋蔥切細絲，泡冰水 5 分鐘去辛辣。',
+      '鮪魚瀝乾，與美乃滋、一點醬油拌勻。',
+      '鋪在飯上，加一顆溫泉蛋或水煮蛋。'
+    ],
+    tip: '洋蔥泡冰水，生吃也不嗆。',
+    kcal: 560, protein: 26
+  },
+  {
+    id: 'miso-tofu-soup',
+    name: '味噌豆腐湯',
+    desc: '10 分鐘暖胃湯品，配什麼都合適。',
+    time: 10, diet: '全素', equip: ['瓦斯爐'], family: '湯',
+    tags: ['10 分鐘', '全素', '暖胃'],
+    ingredients: [
+      { id: 'tofu', qty: 1, amount: '1 盒' },
+      { id: 'miso', qty: 1, amount: '1 匙' },
+      { id: 'mushroom', qty: 1, amount: '3 朵' },
+      { id: 'scallion', qty: 0.5, amount: '半把' }
+    ],
+    steps: [
+      '水 500ml 煮滾，下豆腐與香菇。',
+      '味噌用一點熱湯化開，再倒回鍋中。',
+      '關火，撒上蔥花。'
+    ],
+    tip: '味噌不要煮滾，香氣才留得住。',
+    kcal: 180, protein: 14
+  },
+  {
+    id: 'banana-oat-pancake',
+    name: '香蕉燕麥煎餅',
+    desc: '熟香蕉的最佳去處，不用加糖就甜。',
+    time: 15, diet: '蛋奶素', equip: ['瓦斯爐'], family: '其他',
+    tags: ['15 分鐘', '早餐', '清冰箱'],
+    ingredients: [
+      { id: 'banana', qty: 1, amount: '1 根' },
+      { id: 'oats', qty: 2, amount: '60g' },
+      { id: 'egg', qty: 1, amount: '1 顆' },
+      { id: 'milk', qty: 0.5, amount: '100ml' }
+    ],
+    steps: [
+      '香蕉壓成泥，加入蛋與燕麥拌勻。',
+      '太乾就加一點牛奶，調成濃稠糊狀。',
+      '平底鍋小火煎，兩面金黃即可。'
+    ],
+    tip: '香蕉越熟越甜，表皮長斑的最適合。',
+    kcal: 340, protein: 14
+  },
+  {
+    id: 'tomato-chicken-rice',
+    name: '電鍋番茄雞肉飯',
+    desc: '把所有材料丟進電鍋，等它跳起來。',
+    time: 40, diet: '葷', equip: ['電鍋'], family: '飯',
+    tags: ['電鍋', '一鍋到底', '可帶便當'],
+    ingredients: [
+      { id: 'rice', qty: 1.5, amount: '1.5 碗' },
+      { id: 'tomato', qty: 1, amount: '1 顆' },
+      { id: 'chicken', qty: 1, amount: '100g' },
+      { id: 'onion', qty: 1, amount: '1/2 顆' },
+      { id: 'soy', qty: 1, amount: '2 匙' }
+    ],
+    steps: [
+      '米洗好，內鍋加比平常少一點的水。',
+      '鋪上番茄、洋蔥與雞肉，淋 2 匙醬油。',
+      '外鍋 1.5 杯水，按下開關。',
+      '跳起後拌勻，再悶 5 分鐘。'
+    ],
+    tip: '番茄會出水，內鍋水要減量，飯才不會太濕。',
+    kcal: 600, protein: 30
+  },
+  {
+    id: 'potato-egg-salad-toast',
+    name: '馬鈴薯蛋沙拉吐司',
+    desc: '一次做一盒，夾吐司吃三天。',
+    time: 20, diet: '蛋奶素', equip: ['瓦斯爐'], family: '吐司',
+    tags: ['20 分鐘', '早餐', '可帶便當'],
+    ingredients: [
+      { id: 'potato', qty: 1, amount: '1 顆' },
+      { id: 'egg', qty: 1, amount: '1 顆' },
+      { id: 'bread', qty: 1, amount: '2 片' },
+      { id: 'milk', qty: 0.5, amount: '100ml' },
+      { id: 'mayo', qty: 1, amount: '1 匙' }
+    ],
+    steps: [
+      '馬鈴薯與蛋煮熟，放涼。',
+      '馬鈴薯壓成泥，蛋切碎。',
+      '加美乃滋、牛奶、鹽拌勻。',
+      '夾進烤過的吐司。'
+    ],
+    tip: '牛奶是讓沙拉滑順又不膩的關鍵。',
+    kcal: 470, protein: 18
+  },
+  {
+    id: 'enoki-egg',
+    name: '金針菇炒蛋',
+    desc: '10 分鐘上桌，口感滑嫩又飽足。',
+    time: 10, diet: '蛋奶素', equip: ['瓦斯爐'], family: '蛋',
+    tags: ['10 分鐘', '高蛋白', '清冰箱'],
+    ingredients: [
+      { id: 'enoki', qty: 1, amount: '1 包' },
+      { id: 'egg', qty: 2, amount: '2 顆' },
+      { id: 'scallion', qty: 0.5, amount: '半把' },
+      { id: 'soy', qty: 1, amount: '1 匙' }
+    ],
+    steps: [
+      '金針菇切段，乾鍋炒到出水。',
+      '倒入蛋液，稍微凝固再翻炒。',
+      '加醬油調味，撒上蔥花。'
+    ],
+    tip: '金針菇先乾炒出水，才不會整盤濕答答。',
+    kcal: 260, protein: 18
+  },
+  {
+    id: 'tofu-pork-patty',
+    name: '豬肉豆腐漢堡排',
+    desc: '豆腐讓肉排更嫩，也順便省一半肉錢。',
+    time: 25, diet: '葷', equip: ['瓦斯爐'], family: '其他',
+    tags: ['25 分鐘', '高蛋白', '清冰箱'],
+    ingredients: [
+      { id: 'pork', qty: 1, amount: '100g' },
+      { id: 'tofu', qty: 1, amount: '1 盒' },
+      { id: 'onion', qty: 0.5, amount: '1/4 顆' },
+      { id: 'egg', qty: 1, amount: '1 顆' },
+      { id: 'soy', qty: 1, amount: '1 匙' }
+    ],
+    steps: [
+      '豆腐壓碎瀝乾，洋蔥切末。',
+      '與豬肉、蛋、一點醬油拌到有黏性。',
+      '捏成肉排，中火煎 4 分鐘後翻面。',
+      '蓋鍋悶 3 分鐘，確認熟透。'
+    ],
+    tip: '豆腐一定要瀝乾，不然煎的時候會散開。',
+    kcal: 420, protein: 30
+  },
+  {
+    id: 'mushroom-cream-pasta',
+    name: '奶油蘑菇義大利麵',
+    desc: '沒有鮮奶油也能做，牛奶加起司一樣濃。',
+    time: 25, diet: '蛋奶素', equip: ['瓦斯爐'], family: '麵',
+    tags: ['25 分鐘', '清冰箱', '邪惡系'],
+    ingredients: [
+      { id: 'pasta', qty: 1, amount: '1 份' },
+      { id: 'mushroom', qty: 1, amount: '3 朵' },
+      { id: 'milk', qty: 1, amount: '200ml' },
+      { id: 'cheese', qty: 1, amount: '1 片' },
+      { id: 'garlic', qty: 1, amount: '2 瓣' }
+    ],
+    steps: [
+      '義大利麵煮 9 分鐘。',
+      '蒜與香菇用油炒香。',
+      '加牛奶小火煮 3 分鐘，放入起司拌融。',
+      '下麵條拌勻，加鹽與胡椒。'
+    ],
+    tip: '牛奶要用小火，煮滾容易分離。',
+    kcal: 560, protein: 22
+  },
+  {
+    id: 'veg-instant-noodles',
+    name: '蔬菜泡麵加蛋',
+    desc: '泡麵升級版，加菜加蛋就是完整一餐。',
+    time: 10, diet: '蛋奶素', equip: ['瓦斯爐'], family: '麵',
+    tags: ['10 分鐘', '一鍋到底', '銅板價'],
+    ingredients: [
+      { id: 'instant', qty: 1, amount: '1 包' },
+      { id: 'egg', qty: 1, amount: '1 顆' },
+      { id: 'cabbage', qty: 0.5, amount: '1/8 顆' },
+      { id: 'carrot', qty: 0.3, amount: '1/5 根' }
+    ],
+    steps: [
+      '水 500ml 煮滾，下泡麵與調味包。',
+      '加高麗菜、紅蘿蔔煮 2 分鐘。',
+      '打一顆蛋，關火蓋鍋悶 1 分鐘。'
+    ],
+    tip: '調味包只放一半，鈉含量直接減半。',
+    kcal: 480, protein: 18
+  }
+];
+
+/* 快速加入的常見冰箱食材 */
+const QUICK_INGREDIENTS = [
+  'egg', 'rice', 'cabbage', 'onion', 'tofu', 'tomato', 'potato', 'carrot',
+  'scallion', 'mushroom', 'enoki', 'kimchi', 'cheese', 'bread', 'milk',
+  'tuna', 'noodles', 'vermicelli', 'pork', 'chicken', 'dumpling', 'corn'
+];
+
+</script>
+  <script>
+/* =========================================================
+   剩食救星 — 主程式
+   規則式推薦引擎：比對冰箱、預算、時間、飲食與器具
+   ========================================================= */
+
+(() => {
+  'use strict';
+
+  const STORAGE_KEY = 'leftover-hero-state-v1';
+  const DIET_ORDER = { '全素': 0, '蛋奶素': 1, '葷': 2 };
+  const DEFAULT_EQUIP = ['瓦斯爐', '電鍋', '微波爐'];
+
+  const state = {
+    selected: [],          // [{ id, expiring }]
+    budget: 100,
+    people: 1,
+    maxTime: 30,
+    diet: '葷',
+    equip: [...DEFAULT_EQUIP],
+    results: [],           // [{ recipe, stats, score }]
+    menu: [],              // recipe ids
+    hasGenerated: false
+  };
+
+  /* ---------- DOM ---------- */
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+  const el = {
+    form: $('#fridgeForm'),
+    ingredientInput: $('#ingredientInput'),
+    quickChips: $('#quickChips'),
+    selectedList: $('#selectedList'),
+    selectedCount: $('#selectedCount'),
+    emptyIngredients: $('#emptyIngredients'),
+    budget: $('#budget'),
+    budgetPresets: $('#budgetPresets'),
+    peopleValue: $('#peopleValue'),
+    peopleMinus: $('#peopleMinus'),
+    peoplePlus: $('#peoplePlus'),
+    timeOptions: $('#timeOptions'),
+    dietOptions: $('#dietOptions'),
+    equipOptions: $('#equipOptions'),
+    generateBtn: $('#generateBtn'),
+    resetBtn: $('#resetBtn'),
+    loadDemoBtn: $('#loadDemoBtn'),
+    emptyDemoBtn: $('#emptyDemoBtn'),
+    resultsEmpty: $('#resultsEmpty'),
+    resultsContent: $('#resultsContent'),
+    resultCount: $('#resultCount'),
+    resultNote: $('#resultNote'),
+    resultStats: $('#resultStats'),
+    recipeGrid: $('#recipeGrid'),
+    regenerateBtn: $('#regenerateBtn'),
+    menuPanel: $('#menuPanel'),
+    menuCount: $('#menuCount'),
+    menuDishes: $('#menuDishes'),
+    menuBudgetBadge: $('#menuBudgetBadge'),
+    menuBudgetText: $('#menuBudgetText'),
+    menuBar: $('#menuBar'),
+    menuBudgetHint: $('#menuBudgetHint'),
+    shoppingList: $('#shoppingList'),
+    shoppingTotal: $('#shoppingTotal'),
+    menuSavings: $('#menuSavings'),
+    copyListBtn: $('#copyListBtn'),
+    printListBtn: $('#printListBtn'),
+    receiptCost: $('#receiptCost'),
+    toast: $('#toast')
+  };
+
+  /* ---------- 小工具 ---------- */
+  const money = n => 'NT$' + Math.round(n).toLocaleString('zh-TW');
+  const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
+  const uid = () => Math.random().toString(36).slice(2, 9);
+
+  function toast(message, duration = 2400) {
+    el.toast.textContent = message;
+    el.toast.classList.add('show');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => el.toast.classList.remove('show'), duration);
+  }
+
+  function ingredientById(id) {
+    return INGREDIENTS[id] || null;
+  }
+
+  function hasIngredient(id) {
+    return state.selected.some(item => item.id === id);
+  }
+
+  function isExpiring(id) {
+    const item = state.selected.find(entry => entry.id === id);
+    return Boolean(item && item.expiring);
+  }
+
+  function selectedNameList() {
+    return state.selected.map(item => INGREDIENTS[item.id]?.name).filter(Boolean);
+  }
+
+  /* ---------- 食材搜尋 ---------- */
+  function findIngredientId(text) {
+    const q = String(text || '').trim().toLowerCase().replace(/\s+/g, '');
+    if (!q) return null;
+
+    // 先找完全同名，再找別名 / 包含關係
+    for (const [id, ing] of Object.entries(INGREDIENTS)) {
+      if (ing.name.toLowerCase() === q) return id;
+    }
+    for (const [id, ing] of Object.entries(INGREDIENTS)) {
+      if (ing.aliases.some(alias => alias.toLowerCase() === q)) return id;
+    }
+    for (const [id, ing] of Object.entries(INGREDIENTS)) {
+      const names = [ing.name, ...ing.aliases].map(n => n.toLowerCase());
+      if (names.some(name => name.includes(q) || q.includes(name))) return id;
+    }
+    return null;
+  }
+
+  /* ---------- 加入 / 移除食材 ---------- */
+  function addIngredient(id, { silent = false } = {}) {
+    const ing = ingredientById(id);
+    if (!ing) return false;
+
+    if (ing.pantry) {
+      if (!silent) toast(`「${ing.name}」是常備調味料，系統會自動算進去，不用加。`);
+      return false;
+    }
+    if (hasIngredient(id)) {
+      if (!silent) toast(`「${ing.name}」已經在冰箱裡了。`);
+      return false;
+    }
+
+    state.selected.push({ id, expiring: false });
+    renderIngredients();
+    refreshResults();
+    saveState();
+    if (!silent) toast(`已加入「${ing.name}」`);
+    return true;
+  }
+
+  function removeIngredient(id) {
+    state.selected = state.selected.filter(item => item.id !== id);
+    renderIngredients();
+    refreshResults();
+    saveState();
+  }
+
+  function toggleExpiring(id) {
+    const item = state.selected.find(entry => entry.id === id);
+    if (!item) return;
+    item.expiring = !item.expiring;
+    renderIngredients();
+    refreshResults();
+    saveState();
+    if (item.expiring) toast(`已標記「${INGREDIENTS[id].name}」快過期，會優先排進菜單。`);
+  }
+
+  /* ---------- 表單渲染 ---------- */
+  function renderQuickChips() {
+    el.quickChips.innerHTML = QUICK_INGREDIENTS.map(id => {
+      const ing = INGREDIENTS[id];
+      if (!ing) return '';
+      const added = hasIngredient(id);
+      return `<button type="button" class="quick-chip ${added ? 'is-added' : ''}" data-id="${id}" aria-pressed="${added}">
+        <span class="plus">${added ? '✓' : '＋'}</span>${ing.name}
+      </button>`;
+    }).join('');
+  }
+
+  function renderIngredients() {
+    el.selectedList.innerHTML = state.selected.map(item => {
+      const ing = INGREDIENTS[item.id];
+      if (!ing) return '';
+      return `<li class="selected-item" data-id="${item.id}">
+        <span class="ing-name">${ing.name}</span>
+        <span class="ing-value">約 ${money(ing.price)}</span>
+        <button type="button" class="expire-toggle ${item.expiring ? 'is-on' : ''}"
+          data-action="expire" data-id="${item.id}"
+          aria-pressed="${item.expiring}"
+          title="${item.expiring ? '取消快過期標記' : '標記為快過期'}">
+          <span class="mini-clock">⏱</span>${item.expiring ? '快過期' : '標記'}
+        </button>
+        <button type="button" class="remove-ing" data-action="remove" data-id="${item.id}" aria-label="移除 ${ing.name}">×</button>
+      </li>`;
+    }).join('');
+
+    el.selectedCount.textContent = `${state.selected.length} 樣`;
+    el.emptyIngredients.hidden = state.selected.length > 0;
+    renderQuickChips();
+  }
+
+  function syncFormFromState() {
+    el.budget.value = state.budget;
+    $$('#budgetPresets button').forEach(btn => {
+      btn.classList.toggle('is-active', Number(btn.dataset.budget) === Number(state.budget));
+    });
+    el.peopleValue.textContent = state.people;
+
+    $$('input[name="time"]', el.timeOptions).forEach(input => {
+      input.checked = Number(input.value) === Number(state.maxTime);
+    });
+    $$('input[name="diet"]', el.dietOptions).forEach(input => {
+      input.checked = input.value === state.diet;
+    });
+    $$('input[name="equip"]', el.equipOptions).forEach(input => {
+      input.checked = state.equip.includes(input.value);
+    });
+  }
+
+  function readForm() {
+    const budgetValue = Number(el.budget.value);
+    state.budget = Number.isFinite(budgetValue) ? clamp(budgetValue, 0, 2000) : 0;
+
+    const timeInput = $('input[name="time"]:checked', el.timeOptions);
+    if (timeInput) state.maxTime = Number(timeInput.value);
+
+    const dietInput = $('input[name="diet"]:checked', el.dietOptions);
+    if (dietInput) state.diet = dietInput.value;
+
+    state.equip = $$('input[name="equip"]:checked', el.equipOptions).map(input => input.value);
+  }
+
+  /* ---------- 推薦引擎 ---------- */
+  function dietAllowed(recipe) {
+    return DIET_ORDER[recipe.diet] <= DIET_ORDER[state.diet];
+  }
+
+  function equipAllowed(recipe) {
+    return recipe.equip.every(item => state.equip.includes(item));
+  }
+
+  function computeStats(recipe) {
+    const nonPantry = recipe.ingredients.filter(item => !INGREDIENTS[item.id]?.pantry);
+    const ownedItems = nonPantry.filter(item => hasIngredient(item.id));
+    const missingItems = nonPantry.filter(item => !hasIngredient(item.id));
+    const expiringUsed = ownedItems.filter(item => isExpiring(item.id));
+
+    const perPersonMarket = nonPantry.reduce((sum, item) => sum + INGREDIENTS[item.id].price * item.qty, 0);
+    const perPersonMissing = missingItems.reduce((sum, item) => sum + INGREDIENTS[item.id].price * item.qty, 0);
+
+    const marketCost = perPersonMarket * state.people;
+    const missingCost = perPersonMissing * state.people;
+    const saved = marketCost - missingCost;
+    const coverage = nonPantry.length ? ownedItems.length / nonPantry.length : 0;
+
+    return {
+      nonPantry,
+      ownedItems,
+      missingItems,
+      expiringUsed,
+      marketCost,
+      missingCost,
+      saved,
+      coverage,
+      ownedCount: ownedItems.length,
+      totalCount: nonPantry.length
+    };
+  }
+
+  function scoreRecipe(recipe, stats, previousIds) {
+    let score = 0;
+
+    // 1. 冰箱覆蓋率：用得越多越好
+    score += stats.coverage * 58;
+    score += stats.ownedCount * 4;
+
+    // 2. 快過期食材：強力加權
+    score += stats.expiringUsed.length * 15;
+
+    // 3. 採購成本：越低越好，並依預算逞罰超支
+    const budget = Math.max(state.budget, 1);
+    score += Math.max(0, 1 - stats.missingCost / budget) * 22;
+    score += stats.missingCost <= state.budget ? 14 : -30;
+
+    // 4. 時間符合
+    score += recipe.time <= state.maxTime ? 7 : 0;
+
+    // 5. 換一批時，降低上一輪出現過的權重
+    if (previousIds.has(recipe.id)) score -= 16;
+
+    // 6. 一點隨機，讓每次結果有變化
+    score += Math.random() * 9;
+
+    return score;
+  }
+
+  function pickDiverse(sorted, count = 3) {
+    const picked = [];
+    const usedFamilies = new Set();
+
+    for (const item of sorted) {
+      if (picked.length >= count) break;
+      if (!usedFamilies.has(item.recipe.family)) {
+        picked.push(item);
+        usedFamilies.add(item.recipe.family);
+      }
+    }
+    for (const item of sorted) {
+      if (picked.length >= count) break;
+      if (!picked.includes(item)) picked.push(item);
+    }
+    return picked.slice(0, count);
+  }
+
+  function generate({ scroll = false } = {}) {
+    readForm();
+    saveState();
+
+    const previousIds = new Set(state.results.map(item => item.recipe.id));
+
+    const strictPool = RECIPES.filter(recipe =>
+      dietAllowed(recipe) && equipAllowed(recipe) && recipe.time <= state.maxTime
+    );
+
+    let pool = strictPool;
+    let note = '';
+
+    if (pool.length < 3) {
+      pool = RECIPES.filter(recipe => dietAllowed(recipe) && equipAllowed(recipe));
+      if (pool.length >= 3) {
+        note = `符合 ${state.maxTime} 分鐘的食譜只有 ${strictPool.length} 道，已幫你放寬時間限制。`;
+      }
+    }
+
+    if (pool.length < 3) {
+      pool = RECIPES.filter(recipe => dietAllowed(recipe));
+      note = '符合器具條件的食譜較少，已放寬器具限制；卡片上會標示需要的器具。';
+    }
+
+    if (pool.length === 0) {
+      pool = RECIPES.slice();
+      note = '目前條件沒有完全符合的食譜，先給你冰箱友善的通用選擇。';
+    }
+
+    const scored = pool
+      .map(recipe => ({ recipe, stats: computeStats(recipe) }))
+      .map(item => ({ ...item, score: scoreRecipe(item.recipe, item.stats, previousIds) }))
+      .sort((a, b) => b.score - a.score);
+
+    const picked = pickDiverse(scored, 3);
+
+    state.results = picked;
+    state.menu = picked.length ? [picked[0].recipe.id] : [];
+    state.hasGenerated = true;
+
+    renderResults(note);
+    renderMenu();
+    saveState();
+
+    const minCost = picked.length
+      ? Math.min(...picked.map(item => item.stats.missingCost))
+      : 0;
+    el.receiptCost.textContent = money(minCost);
+
+    if (scroll && window.innerWidth < 900) {
+      requestAnimationFrame(() => {
+        el.resultsContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  }
+
+  /* ---------- 結果渲染 ---------- */
+  function rankLabel(item, index) {
+    if (index === 0) return { text: '最推薦', cls: '' };
+    if (item.stats.expiringUsed.length > 0) return { text: '清冰箱', cls: 'mustard' };
+    if (item.recipe.time <= 15) return { text: '快速上桌', cls: 'tomato' };
+    return { text: '換口味', cls: '' };
+  }
+
+  function renderResults(note = '') {
+    const results = state.results;
+    if (!results.length) {
+      el.resultsEmpty.hidden = false;
+      el.resultsContent.hidden = true;
+      el.menuPanel.hidden = true;
+      return;
+    }
+
+    el.resultsEmpty.hidden = true;
+    el.resultsContent.hidden = false;
+
+    el.resultCount.textContent = results.length;
+    el.resultNote.textContent = note;
+    el.resultNote.hidden = !note;
+
+    const allOwned = new Set();
+    const allExpiring = new Set();
+    results.forEach(item => {
+      item.stats.ownedItems.forEach(ing => allOwned.add(ing.id));
+      item.stats.expiringUsed.forEach(ing => allExpiring.add(ing.id));
+    });
+
+    const minCost = Math.min(...results.map(item => item.stats.missingCost));
+    const avgTime = Math.round(results.reduce((sum, item) => sum + item.recipe.time, 0) / results.length);
+
+    el.resultStats.innerHTML = `
+      <div class="stat">
+        <span>最低再花</span>
+        <strong>${minCost === 0 ? '0 元' : money(minCost)}</strong>
+      </div>
+      <div class="stat">
+        <span>可清冰箱</span>
+        <strong>${allOwned.size}<em>樣</em></strong>
+      </div>
+      <div class="stat">
+        <span>平均時間</span>
+        <strong>${avgTime}<em>分鐘</em></strong>
+      </div>
+    `;
+
+    el.recipeGrid.innerHTML = results.map((item, index) => renderCard(item, index)).join('');
+    el.menuPanel.hidden = false;
+  }
+
+  function renderCard(item, index) {
+    const { recipe, stats } = item;
+    const label = rankLabel(item, index);
+    const selected = state.menu.includes(recipe.id);
+    const isTop = index === 0;
+
+    const ingredientChips = recipe.ingredients.map(entry => {
+      const ing = INGREDIENTS[entry.id];
+      if (!ing) return '';
+      if (ing.pantry) {
+        return `<span class="ing-chip pantry" title="${entry.amount}">${ing.name}</span>`;
+      }
+      const owned = hasIngredient(entry.id);
+      const cost = ing.price * entry.qty * state.people;
+      return `<span class="ing-chip ${owned ? 'have' : 'buy'}" title="${entry.amount}">
+        ${owned ? '✓' : '＋'} ${ing.name}${owned ? '' : ` ${money(cost)}`}
+      </span>`;
+    }).join('');
+
+    const expiringLine = stats.expiringUsed.length
+      ? `<div class="card-expiring"><span>⏱</span>優先清掉：${stats.expiringUsed.map(entry => INGREDIENTS[entry.id].name).join('、')}</div>`
+      : '';
+
+    const costText = stats.missingCost === 0 ? '0 元' : money(stats.missingCost);
+    const costClass = stats.missingCost === 0 ? 'zero' : 'money';
+    const equipText = recipe.equip.join('＋');
+
+    return `<article class="recipe-card ${isTop ? 'is-top' : ''} ${selected ? 'is-selected' : ''}" data-id="${recipe.id}">
+      <div class="card-top">
+        <span class="rank">NO.${String(index + 1).padStart(2, '0')}</span>
+        <span class="rank-badge ${label.cls}">${label.text}</span>
+        <span class="card-time" title="需要器具：${equipText}">⏱ ${recipe.time} 分 · ${equipText}</span>
+      </div>
+
+      <h3>${recipe.name}</h3>
+      <p class="card-desc">${recipe.desc}</p>
+
+      <div class="card-metrics">
+        <div>
+          <span>再花（${state.people} 人）</span>
+          <strong class="${costClass}">${costText}</strong>
+        </div>
+        <div>
+          <span>清冰箱</span>
+          <strong>${stats.ownedCount}/${stats.totalCount} 樣</strong>
+        </div>
+        <div>
+          <span>熱量</span>
+          <strong>${recipe.kcal * state.people} <em>kcal</em></strong>
+        </div>
+      </div>
+
+      <div class="card-ingredients">${ingredientChips}</div>
+      ${expiringLine}
+
+      <div class="card-steps">
+        <button type="button" class="toggle-steps" data-action="toggle-steps" data-id="${recipe.id}" aria-expanded="false" aria-controls="steps-${recipe.id}">
+          <span>看做法（${recipe.steps.length} 步）</span>
+          <span class="chev">▼</span>
+        </button>
+        <div class="steps-body" id="steps-${recipe.id}" hidden>
+          <ol>${recipe.steps.map(step => `<li>${step}</li>`).join('')}</ol>
+          <div class="card-tip">💡 ${recipe.tip}</div>
+        </div>
+      </div>
+
+      <button type="button" class="card-add ${selected ? 'is-added' : ''}" data-action="toggle-menu" data-id="${recipe.id}">
+        ${selected ? '✓ 已加入今晚菜單' : '＋ 加入今晚菜單'}
+      </button>
+    </article>`;
+  }
+
+  /* ---------- 今晚菜單 / 採購清單 ---------- */
+  function computeMenu() {
+    const recipes = state.menu
+      .map(id => RECIPES.find(recipe => recipe.id === id))
+      .filter(Boolean);
+
+    const shopMap = new Map();
+    const ownedSet = new Set();
+    const expiringSet = new Set();
+    let marketCost = 0;
+
+    recipes.forEach(recipe => {
+      recipe.ingredients.forEach(entry => {
+        const ing = INGREDIENTS[entry.id];
+        if (!ing || ing.pantry) return;
+
+        marketCost += ing.price * entry.qty * state.people;
+
+        if (hasIngredient(entry.id)) {
+          ownedSet.add(entry.id);
+          if (isExpiring(entry.id)) expiringSet.add(entry.id);
+        } else {
+          const current = shopMap.get(entry.id) || 0;
+          shopMap.set(entry.id, current + entry.qty);
+        }
+      });
+    });
+
+    const shopItems = Array.from(shopMap.entries()).map(([id, qty]) => {
+      const ing = INGREDIENTS[id];
+      return {
+        id,
+        name: ing.name,
+        unit: ing.unit,
+        qty,
+        cost: ing.price * qty * state.people
+      };
+    }).sort((a, b) => b.cost - a.cost);
+
+    const missingCost = shopItems.reduce((sum, item) => sum + item.cost, 0);
+
+    return {
+      recipes,
+      shopItems,
+      marketCost,
+      missingCost,
+      saved: marketCost - missingCost,
+      ownedCount: ownedSet.size,
+      expiringCount: expiringSet.size
+    };
+  }
+
+  function renderMenu() {
+    const menu = computeMenu();
+
+    if (!menu.recipes.length) {
+      el.menuPanel.hidden = true;
+      return;
+    }
+
+    el.menuPanel.hidden = false;
+    el.menuCount.textContent = `${menu.recipes.length} 道`;
+
+    el.menuDishes.innerHTML = menu.recipes.map(recipe => {
+      const stats = computeStats(recipe);
+      return `<li class="menu-dish">
+        <span class="dish-name">${recipe.name}</span>
+        <span class="dish-meta">${stats.missingCost === 0 ? '冰箱全包' : `再花 ${money(stats.missingCost)}`}</span>
+        <button type="button" class="dish-remove" data-action="remove-menu" data-id="${recipe.id}" aria-label="移除 ${recipe.name}">×</button>
+      </li>`;
+    }).join('');
+
+    if (menu.shopItems.length) {
+      el.shoppingList.innerHTML = menu.shopItems.map(item => `
+        <li class="shopping-item">
+          <input type="checkbox" id="shop-${item.id}">
+          <label for="shop-${item.id}">${item.name} <span class="shop-qty">× ${formatQty(item.qty)}</span></label>
+          <span class="shop-price">${money(item.cost)}</span>
+        </li>
+      `).join('');
+    } else {
+      el.shoppingList.innerHTML = `<li class="menu-empty">冰箱全包，今天不用買菜！</li>`;
+    }
+
+    el.shoppingTotal.textContent = menu.missingCost === 0 ? 'NT$0' : money(menu.missingCost);
+    el.menuSavings.textContent = money(menu.saved);
+
+    const budget = Math.max(state.budget, 0);
+    const ratio = budget > 0 ? menu.missingCost / budget : (menu.missingCost > 0 ? 2 : 0);
+    const over = menu.missingCost > budget;
+    const remaining = budget - menu.missingCost;
+
+    el.menuBudgetText.textContent = `${money(menu.missingCost)} / ${money(budget)}`;
+    el.menuBar.style.width = `${clamp(ratio * 100, 0, 100)}%`;
+    el.menuBar.parentElement.classList.toggle('over', over);
+
+    el.menuBudgetBadge.textContent = over ? `超出 ${money(-remaining)}` : `預算內，還剩 ${money(remaining)}`;
+    el.menuBudgetBadge.classList.toggle('over', over);
+    el.menuBudgetBadge.classList.toggle('ok', !over);
+
+    if (menu.shopItems.length === 0) {
+      el.menuBudgetHint.textContent = '這組菜色完全用到冰箱現有食材，0 元開飯。';
+    } else if (over) {
+      el.menuBudgetHint.textContent = `比預算多 ${money(-remaining)}，可以少選一道菜或替換貴的食材。`;
+    } else {
+      el.menuBudgetHint.textContent = `採購後還會剩下 ${money(remaining)}，記得留一點給明天。`;
+    }
+  }
+
+  function formatQty(qty) {
+    const rounded = Math.round(qty * 100) / 100;
+    if (Number.isInteger(rounded)) return String(rounded);
+    return rounded.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+  }
+
+  function refreshResults() {
+    if (!state.hasGenerated || !state.results.length) {
+      renderIngredients();
+      return;
+    }
+    state.results = state.results.map(item => ({
+      ...item,
+      stats: computeStats(item.recipe)
+    }));
+    renderResults(el.resultNote.hidden ? '' : el.resultNote.textContent);
+    renderMenu();
+    saveState();
+  }
+
+  /* ---------- 複製 / 列印 ---------- */
+  function buildShoppingText() {
+    const menu = computeMenu();
+    if (!menu.recipes.length) return '';
+
+    const lines = [
+      '🍳 今晚菜單（' + state.people + ' 人份）',
+      ...menu.recipes.map(recipe => `・${recipe.name}（${recipe.time} 分鐘）`),
+      '',
+      '🛒 還需要買'
+    ];
+
+    if (menu.shopItems.length) {
+      menu.shopItems.forEach(item => {
+        lines.push(`・${item.name} × ${formatQty(item.qty)} — ${money(item.cost)}`);
+      });
+    } else {
+      lines.push('・不用買，冰箱全包！');
+    }
+
+    lines.push(
+      '',
+      `預估採購：${money(menu.missingCost)}`,
+      `冰箱已省：${money(menu.saved)}`,
+      `預算：${money(state.budget)}`,
+      '',
+      '— 剩食救星・月底省錢食譜產生器'
+    );
+
+    return lines.join('\n');
+  }
+
+  async function copyShoppingList() {
+    const text = buildShoppingText();
+    if (!text) {
+      toast('先加入至少一道菜吧。');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('採購清單已複製，去買菜吧！');
+    } catch (error) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        toast('採購清單已複製，去買菜吧！');
+      } catch (fallbackError) {
+        toast('複製失敗，請手動選取採購清單。');
+      }
+      textarea.remove();
+    }
+  }
+
+  /* ---------- 儲存 ---------- */
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        selected: state.selected,
+        budget: state.budget,
+        people: state.people,
+        maxTime: state.maxTime,
+        diet: state.diet,
+        equip: state.equip,
+        results: state.results.map(item => item.recipe.id),
+        menu: state.menu,
+        hasGenerated: state.hasGenerated
+      }));
+    } catch (error) {
+      /* 無痕模式或 file:// 限制時忽略 */
+    }
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      const saved = JSON.parse(raw);
+      if (!saved || typeof saved !== 'object') return false;
+
+      state.selected = Array.isArray(saved.selected)
+        ? saved.selected
+            .filter(item => item && INGREDIENTS[item.id] && !INGREDIENTS[item.id].pantry)
+            .map(item => ({ id: item.id, expiring: Boolean(item.expiring) }))
+        : [];
+      state.budget = Number.isFinite(Number(saved.budget)) ? clamp(Number(saved.budget), 0, 2000) : 100;
+      state.people = Number.isFinite(Number(saved.people)) ? clamp(Number(saved.people), 1, 6) : 1;
+      state.maxTime = [10, 20, 30, 45].includes(Number(saved.maxTime)) ? Number(saved.maxTime) : 30;
+      state.diet = ['葷', '蛋奶素', '全素'].includes(saved.diet) ? saved.diet : '葷';
+      state.equip = Array.isArray(saved.equip)
+        ? saved.equip.filter(item => ['瓦斯爐', '電鍋', '微波爐', '烤箱', '氣炸鍋'].includes(item))
+        : [...DEFAULT_EQUIP];
+      state.menu = Array.isArray(saved.menu) ? saved.menu.filter(id => RECIPES.some(recipe => recipe.id === id)) : [];
+      state.results = Array.isArray(saved.results)
+        ? saved.results
+            .map(id => RECIPES.find(recipe => recipe.id === id))
+            .filter(Boolean)
+            .map(recipe => ({ recipe, stats: computeStats(recipe), score: 0 }))
+        : [];
+      state.hasGenerated = Boolean(saved.hasGenerated && state.results.length);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /* ---------- 範例資料 ---------- */
+  const DEMO_STATE = {
+    selected: [
+      { id: 'rice', expiring: false },
+      { id: 'egg', expiring: false },
+      { id: 'cabbage', expiring: true },
+      { id: 'onion', expiring: false },
+      { id: 'tofu', expiring: true },
+      { id: 'kimchi', expiring: false },
+      { id: 'scallion', expiring: false }
+    ],
+    budget: 100,
+    people: 2,
+    maxTime: 30,
+    diet: '葷',
+    equip: ['瓦斯爐', '電鍋', '微波爐']
+  };
+
+  function applyDemo({ generateResults = true, scroll = false } = {}) {
+    state.selected = DEMO_STATE.selected.map(item => ({ ...item }));
+    state.budget = DEMO_STATE.budget;
+    state.people = DEMO_STATE.people;
+    state.maxTime = DEMO_STATE.maxTime;
+    state.diet = DEMO_STATE.diet;
+    state.equip = [...DEMO_STATE.equip];
+    state.results = [];
+    state.menu = [];
+    state.hasGenerated = false;
+
+    syncFormFromState();
+    renderIngredients();
+
+    if (generateResults) {
+      generate({ scroll });
+      toast('已載入範例冰箱：高麗菜和豆腐快過期，幫你優先清掉。', 3200);
+    }
+  }
+
+  function resetAll() {
+    state.selected = [];
+    state.budget = 100;
+    state.people = 1;
+    state.maxTime = 30;
+    state.diet = '葷';
+    state.equip = [...DEFAULT_EQUIP];
+    state.results = [];
+    state.menu = [];
+    state.hasGenerated = false;
+
+    syncFormFromState();
+    renderIngredients();
+    el.resultsEmpty.hidden = false;
+    el.resultsContent.hidden = true;
+    el.menuPanel.hidden = true;
+    el.receiptCost.textContent = 'NT$35';
+    saveState();
+    toast('已重設，重新開始盤點冰箱吧。');
+  }
+
+  /* ---------- 事件 ---------- */
+  function bindEvents() {
+    // 加入食材
+    el.form.addEventListener('submit', event => {
+      event.preventDefault();
+      const value = el.ingredientInput.value.trim();
+      if (!value) {
+        toast('先輸入一樣食材吧。');
+        el.ingredientInput.focus();
+        return;
+      }
+      const id = findIngredientId(value);
+      if (!id) {
+        toast(`目前沒有「${value}」的資料，試試高麗菜、雞蛋、豆腐或洋蔥。`, 3000);
+        return;
+      }
+      if (addIngredient(id)) {
+        el.ingredientInput.value = '';
+        el.ingredientInput.focus();
+      }
+    });
+
+    // 快速食材
+    el.quickChips.addEventListener('click', event => {
+      const chip = event.target.closest('.quick-chip');
+      if (!chip) return;
+      const id = chip.dataset.id;
+      if (hasIngredient(id)) {
+        removeIngredient(id);
+      } else {
+        addIngredient(id);
+      }
+    });
+
+    // 已選食材：快過期 / 移除
+    el.selectedList.addEventListener('click', event => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+      const id = button.dataset.id;
+      if (button.dataset.action === 'expire') toggleExpiring(id);
+      if (button.dataset.action === 'remove') removeIngredient(id);
+    });
+
+    // 預算
+    el.budget.addEventListener('input', () => {
+      const value = Number(el.budget.value);
+      state.budget = Number.isFinite(value) ? clamp(value, 0, 2000) : 0;
+      $$('#budgetPresets button').forEach(btn => {
+        btn.classList.toggle('is-active', Number(btn.dataset.budget) === state.budget);
+      });
+      if (state.results.length) renderMenu();
+      saveState();
+    });
+
+    el.budgetPresets.addEventListener('click', event => {
+      const button = event.target.closest('button[data-budget]');
+      if (!button) return;
+      state.budget = Number(button.dataset.budget);
+      el.budget.value = state.budget;
+      $$('#budgetPresets button').forEach(btn => {
+        btn.classList.toggle('is-active', Number(btn.dataset.budget) === state.budget);
+      });
+      if (state.results.length) renderMenu();
+      saveState();
+    });
+
+    // 人數
+    el.peopleMinus.addEventListener('click', () => {
+      state.people = clamp(state.people - 1, 1, 6);
+      el.peopleValue.textContent = state.people;
+      refreshResults();
+      saveState();
+    });
+    el.peoplePlus.addEventListener('click', () => {
+      state.people = clamp(state.people + 1, 1, 6);
+      el.peopleValue.textContent = state.people;
+      refreshResults();
+      saveState();
+    });
+
+    // 時間 / 飲食 / 器具
+    [el.timeOptions, el.dietOptions, el.equipOptions].forEach(group => {
+      group.addEventListener('change', () => {
+        readForm();
+        saveState();
+      });
+    });
+
+    // 產生
+    el.generateBtn.addEventListener('click', event => {
+      event.preventDefault();
+      generate({ scroll: true });
+    });
+
+    // 換一批
+    el.regenerateBtn.addEventListener('click', () => {
+      if (state.selected.length === 0) {
+        toast('冰箱是空的，先加入食材才能換菜色。');
+        return;
+      }
+      generate({ scroll: false });
+      toast('換一批新菜色，看看有沒有更省的組合。');
+    });
+
+    // 結果卡片：看做法 / 加入菜單
+    el.recipeGrid.addEventListener('click', event => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+      const recipeId = button.dataset.id;
+
+      if (button.dataset.action === 'toggle-steps') {
+        const body = document.getElementById(`steps-${recipeId}`);
+        if (!body) return;
+        const isOpen = button.getAttribute('aria-expanded') === 'true';
+        button.setAttribute('aria-expanded', String(!isOpen));
+        body.hidden = isOpen;
+        return;
+      }
+
+      if (button.dataset.action === 'toggle-menu') {
+        if (state.menu.includes(recipeId)) {
+          state.menu = state.menu.filter(id => id !== recipeId);
+          toast('已從今晚菜單移除。');
+        } else {
+          state.menu.push(recipeId);
+          toast('已加入今晚菜單，採購清單也更新了。');
+        }
+        renderResults(el.resultNote.hidden ? '' : el.resultNote.textContent);
+        renderMenu();
+        saveState();
+      }
+    });
+
+    // 從菜單移除
+    el.menuDishes.addEventListener('click', event => {
+      const button = event.target.closest('button[data-action="remove-menu"]');
+      if (!button) return;
+      state.menu = state.menu.filter(id => id !== button.dataset.id);
+      renderResults(el.resultNote.hidden ? '' : el.resultNote.textContent);
+      renderMenu();
+      saveState();
+      toast('已從今晚菜單移除。');
+    });
+
+    // 複製 / 列印
+    el.copyListBtn.addEventListener('click', copyShoppingList);
+    el.printListBtn.addEventListener('click', () => {
+      if (!state.menu.length) {
+        toast('先加入至少一道菜再列印。');
+        return;
+      }
+      window.print();
+    });
+
+    // 重設 / 範例
+    el.resetBtn.addEventListener('click', resetAll);
+    el.loadDemoBtn.addEventListener('click', () => {
+      applyDemo({ generateResults: true, scroll: true });
+    });
+    el.emptyDemoBtn.addEventListener('click', () => {
+      applyDemo({ generateResults: true, scroll: true });
+    });
+  }
+
+  /* ---------- 啟動 ---------- */
+  function init() {
+    bindEvents();
+
+    const hasSaved = loadState();
+    syncFormFromState();
+    renderIngredients();
+
+    if (hasSaved && state.hasGenerated && state.results.length) {
+      if (state.menu.length === 0) state.menu = [state.results[0].recipe.id];
+      renderResults('');
+      renderMenu();
+    } else if (hasSaved && state.selected.length > 0) {
+      // 有食材但還沒產生：顯示空狀態，讓使用者按產生
+      renderResults('');
+    } else {
+      // 第一次造訪：載入範例並直接產生，讓畫面一打開就有結果
+      applyDemo({ generateResults: true, scroll: false });
+    }
+  }
+
+  init();
+})();
+
+</script>
+</body>
+</html>
