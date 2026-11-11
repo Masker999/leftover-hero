@@ -2493,27 +2493,21 @@ const QUICK_INGREDIENTS = [
     }
 
     state.selected.push({ id, expiring: false });
-    renderIngredients();
-    refreshResults();
-    saveState();
+    autoRefresh();
     if (!silent) toast(`已加入「${ing.name}」`);
     return true;
   }
 
   function removeIngredient(id) {
     state.selected = state.selected.filter(item => item.id !== id);
-    renderIngredients();
-    refreshResults();
-    saveState();
+    autoRefresh();
   }
 
   function toggleExpiring(id) {
     const item = state.selected.find(entry => entry.id === id);
     if (!item) return;
     item.expiring = !item.expiring;
-    renderIngredients();
-    refreshResults();
-    saveState();
+    autoRefresh();
     if (item.expiring) toast(`已標記「${INGREDIENTS[id].name}」快過期，會優先排進菜單。`);
   }
 
@@ -2619,29 +2613,32 @@ const QUICK_INGREDIENTS = [
     };
   }
 
-  function scoreRecipe(recipe, stats, previousIds) {
+  function scoreRecipe(recipe, stats, previousIds, jitter = 0) {
     let score = 0;
 
-    // 1. 冰箱覆蓋率：用得越多越好
-    score += stats.coverage * 58;
-    score += stats.ownedCount * 4;
+    // 1. 符合的食材數量：越多越推薦（主要排序依據）
+    score += stats.ownedCount * 12;
+    score += stats.coverage * 40;
 
-    // 2. 快過期食材：強力加權
+    // 2. 缺的食材越少越好
+    score -= stats.missingItems.length * 6;
+
+    // 3. 快過期食材：強力加權
     score += stats.expiringUsed.length * 15;
 
-    // 3. 採購成本：越低越好，並依預算逞罰超支
+    // 4. 採購成本：越低越好，並依預算逞罰超支
     const budget = Math.max(state.budget, 1);
     score += Math.max(0, 1 - stats.missingCost / budget) * 22;
     score += stats.missingCost <= state.budget ? 14 : -30;
 
-    // 4. 時間符合
+    // 5. 時間符合
     score += recipe.time <= state.maxTime ? 7 : 0;
 
-    // 5. 換一批時，降低上一輪出現過的權重
-    if (previousIds.has(recipe.id)) score -= 16;
+    // 6. 換一批時，降低上一輪出現過的權重
+    if (jitter > 0 && previousIds.has(recipe.id)) score -= 16;
 
-    // 6. 一點隨機，讓每次結果有變化
-    score += Math.random() * 9;
+    // 7. 只有「換一批」才加隨機；點食材即時更新時排序保持穩定
+    score += Math.random() * jitter;
 
     return score;
   }
@@ -2652,10 +2649,19 @@ const QUICK_INGREDIENTS = [
 
     for (const item of sorted) {
       if (picked.length >= count) break;
-      if (!usedFamilies.has(item.recipe.family)) {
-        picked.push(item);
-        usedFamilies.add(item.recipe.family);
+
+      if (usedFamilies.has(item.recipe.family)) {
+        // 排名優先：只有分數幾乎相同時，才讓口味分散插隊
+        const alt = sorted.find(candidate =>
+          !picked.includes(candidate) &&
+          !usedFamilies.has(candidate.recipe.family) &&
+          item.score - candidate.score < 8
+        );
+        if (alt) continue;
       }
+
+      picked.push(item);
+      usedFamilies.add(item.recipe.family);
     }
     for (const item of sorted) {
       if (picked.length >= count) break;
@@ -2664,7 +2670,7 @@ const QUICK_INGREDIENTS = [
     return picked.slice(0, count);
   }
 
-  function generate({ scroll = false } = {}) {
+  function generate({ scroll = false, preserveMenu = false, jitter = 0 } = {}) {
     readForm();
     saveState();
 
@@ -2696,13 +2702,23 @@ const QUICK_INGREDIENTS = [
 
     const scored = pool
       .map(recipe => ({ recipe, stats: computeStats(recipe) }))
-      .map(item => ({ ...item, score: scoreRecipe(item.recipe, item.stats, previousIds) }))
+      .map(item => ({ ...item, score: scoreRecipe(item.recipe, item.stats, previousIds, jitter) }))
       .sort((a, b) => b.score - a.score);
 
     const picked = pickDiverse(scored, 3);
 
+    if (preserveMenu && state.selected.length) {
+      const live = `已依冰箱 ${state.selected.length} 樣食材即時排序`;
+      note = note ? `${live}｜${note}` : live;
+    }
+
     state.results = picked;
-    state.menu = picked.length ? [picked[0].recipe.id] : [];
+    if (preserveMenu) {
+      const keepMenu = state.menu.filter(id => RECIPES.some(recipe => recipe.id === id));
+      state.menu = keepMenu.length ? keepMenu : (picked.length ? [picked[0].recipe.id] : []);
+    } else {
+      state.menu = picked.length ? [picked[0].recipe.id] : [];
+    }
     state.hasGenerated = true;
 
     renderResults(note);
@@ -2770,7 +2786,21 @@ const QUICK_INGREDIENTS = [
       </div>
     `;
 
+    const openSteps = new Set(
+      [...el.recipeGrid.querySelectorAll('button[data-action="toggle-steps"][aria-expanded="true"]')]
+        .map(button => button.dataset.id)
+    );
+
     el.recipeGrid.innerHTML = results.map((item, index) => renderCard(item, index)).join('');
+
+    openSteps.forEach(recipeId => {
+      const button = el.recipeGrid.querySelector(`button[data-action="toggle-steps"][data-id="${recipeId}"]`);
+      const body = document.getElementById(`steps-${recipeId}`);
+      if (!button || !body) return;
+      button.setAttribute('aria-expanded', 'true');
+      body.hidden = false;
+    });
+
     el.menuPanel.hidden = false;
   }
 
@@ -2961,18 +2991,23 @@ const QUICK_INGREDIENTS = [
     return rounded.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
   }
 
-  function refreshResults() {
-    if (!state.hasGenerated || !state.results.length) {
-      renderIngredients();
+  /* 點食材 / 改人數時：立刻重算並重新排序 */
+  function autoRefresh() {
+    renderIngredients();
+
+    if (!state.selected.length) {
+      state.results = [];
+      state.menu = [];
+      state.hasGenerated = false;
+      el.resultsEmpty.hidden = false;
+      el.resultsContent.hidden = true;
+      el.menuPanel.hidden = true;
+      el.receiptCost.textContent = 'NT$35';
+      saveState();
       return;
     }
-    state.results = state.results.map(item => ({
-      ...item,
-      stats: computeStats(item.recipe)
-    }));
-    renderResults(el.resultNote.hidden ? '' : el.resultNote.textContent);
-    renderMenu();
-    saveState();
+
+    generate({ scroll: false, preserveMenu: true, jitter: 0 });
   }
 
   /* ---------- 複製 / 列印 ---------- */
@@ -3216,14 +3251,12 @@ const QUICK_INGREDIENTS = [
     el.peopleMinus.addEventListener('click', () => {
       state.people = clamp(state.people - 1, 1, 6);
       el.peopleValue.textContent = state.people;
-      refreshResults();
-      saveState();
+      autoRefresh();
     });
     el.peoplePlus.addEventListener('click', () => {
       state.people = clamp(state.people + 1, 1, 6);
       el.peopleValue.textContent = state.people;
-      refreshResults();
-      saveState();
+      autoRefresh();
     });
 
     // 時間 / 飲食 / 器具
@@ -3246,7 +3279,7 @@ const QUICK_INGREDIENTS = [
         toast('冰箱是空的，先加入食材才能換菜色。');
         return;
       }
-      generate({ scroll: false });
+      generate({ scroll: false, jitter: 9 });
       toast('換一批新菜色，看看有沒有更省的組合。');
     });
 
@@ -3318,13 +3351,14 @@ const QUICK_INGREDIENTS = [
     syncFormFromState();
     renderIngredients();
 
-    if (hasSaved && state.hasGenerated && state.results.length) {
-      if (state.menu.length === 0) state.menu = [state.results[0].recipe.id];
-      renderResults('');
-      renderMenu();
-    } else if (hasSaved && state.selected.length > 0) {
-      // 有食材但還沒產生：顯示空狀態，讓使用者按產生
-      renderResults('');
+    if (state.selected.length > 0) {
+      // 有選食材（不論是剛載入或上次留下的）：立刻算出並排序
+      generate({ scroll: false, preserveMenu: true, jitter: 0 });
+    } else if (hasSaved) {
+      el.resultsEmpty.hidden = false;
+      el.resultsContent.hidden = true;
+      el.menuPanel.hidden = true;
+      el.receiptCost.textContent = 'NT$35';
     } else {
       // 第一次造訪：載入範例並直接產生，讓畫面一打開就有結果
       applyDemo({ generateResults: true, scroll: false });
